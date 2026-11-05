@@ -19,4 +19,3 @@ class ExampleRobolectricTest {
     assertEquals("Edits", appName)
   }
 }
-
