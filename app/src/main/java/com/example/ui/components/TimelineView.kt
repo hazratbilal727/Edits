@@ -338,6 +338,11 @@ private fun TimelineClip(
   val width = (visibleRight - visibleLeft).coerceAtLeast(1f)
   val frameWidth = with(density) { 46.dp.toPx() }
   val segments = remember(clip) { clip.speedSegments() }
+  val markers = remember(clip, segments) {
+    val visible = clip.startMs until clip.endMs
+    clip.speedPoints.filter { it.sourceMs in visible }.map { segments.timelineTimeAt(it.sourceMs) to CapCutTeal } +
+      clip.transformKeyframes.filter { it.sourceMs in visible }.map { segments.timelineTimeAt(it.sourceMs) to CapCutPurple }
+  }
   Box(
     Modifier.offset { IntOffset(visibleLeft.roundToInt(), 0) }.width(with(density) { width.toDp() })
       .fillMaxHeight().clip(RoundedCornerShape(5.dp)).background(CapCutSurfaceVariant)
@@ -354,6 +359,14 @@ private fun TimelineClip(
     }
     Box(Modifier.matchParentSize().border(if (selected) 2.dp else 0.5.dp,
       if (selected) CapCutTextPrimary else CapCutSurfaceVariant, RoundedCornerShape(5.dp)))
+    if (markers.isNotEmpty()) {
+      Canvas(Modifier.matchParentSize()) {
+        markers.forEach { (time, color) ->
+          val x = left - visibleLeft + (time * pxPerMs).toFloat()
+          if (x in 0f..size.width) drawCircle(color, 3.dp.toPx(), Offset(x, 7.dp.toPx()))
+        }
+      }
+    }
     if (clip.isMuted || clip.volume == 0f) {
       Icon(Icons.Default.VolumeOff, "Clip muted", Modifier.padding(5.dp).size(15.dp).background(Color.Black.copy(alpha = 0.6f)),
         tint = Color.White)
