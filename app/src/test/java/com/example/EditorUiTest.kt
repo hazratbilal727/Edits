@@ -91,18 +91,18 @@ class EditorUiTest {
     compose.runOnIdle { model.addTextTrack("Touch title") }
     compose.waitForIdle()
     val initial = model.uiState.value.textTracks.single()
-    compose.onNodeWithTag("text_layer_canvas").performTouchInput {
+    compose.onNodeWithTag("text_layer_canvas", useUnmergedTree = true).performTouchInput {
       val start = androidx.compose.ui.geometry.Offset(width * initial.posX, height * initial.posY)
       swipe(start, start + androidx.compose.ui.geometry.Offset(20f, -20f), 350)
     }
     compose.runOnIdle {
       val moved = model.uiState.value.textTracks.single()
-      assertTrue(moved.posX > initial.posX)
-      assertTrue(moved.posY < initial.posY)
+      assertTrue("Drag should move X from ${initial.posX} to ${moved.posX}", moved.posX > initial.posX)
+      assertTrue("Drag should move Y from ${initial.posY} to ${moved.posY}", moved.posY < initial.posY)
       model.updateTextLayer(moved.copy(colorHex = "#00E5FF", rotation = 12f, backgroundHex = "#BB000000", entrance = "Fade"))
     }
     val styled = compose.runOnIdle { model.uiState.value.textTracks.single() }
-    compose.onNodeWithTag("text_layer_canvas").performTouchInput {
+    compose.onNodeWithTag("text_layer_canvas", useUnmergedTree = true).performTouchInput {
       val center = androidx.compose.ui.geometry.Offset(width * styled.posX, height * styled.posY)
       down(0, center + androidx.compose.ui.geometry.Offset(-15f, 0f))
       down(1, center + androidx.compose.ui.geometry.Offset(15f, 0f))
