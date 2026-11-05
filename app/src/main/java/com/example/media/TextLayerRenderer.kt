@@ -109,10 +109,10 @@ class TextLayerRenderer {
     background.alpha = (Color.alpha(background.color) * motion.alpha).toInt()
     canvas.drawRoundRect(0f, 0f, width, height, padding, padding, background)
     canvas.translate(padding, padding)
-    paint.alpha = (motion.alpha * 255).toInt()
+    paint.alpha = (motion.alpha * Color.alpha(paint.color)).toInt()
     paint.style = Paint.Style.FILL
     paint.color = parse(track.colorHex, Color.WHITE)
-    paint.alpha = (motion.alpha * 255).toInt()
+    paint.alpha = (motion.alpha * Color.alpha(paint.color)).toInt()
     if (track.shadow) paint.setShadowLayer(canvas.width / 180f, 0f, canvas.width / 360f, Color.BLACK)
     else paint.clearShadowLayer()
     if (track.strokeWidth > 0) {
@@ -120,11 +120,11 @@ class TextLayerRenderer {
       paint.strokeWidth = track.strokeWidth * canvas.width / 360f
       paint.strokeJoin = Paint.Join.ROUND
       paint.color = parse(track.strokeHex, Color.BLACK)
-      paint.alpha = (motion.alpha * 255).toInt()
+      paint.alpha = (motion.alpha * Color.alpha(paint.color)).toInt()
       layout.draw(canvas)
       paint.style = Paint.Style.FILL
       paint.color = parse(track.colorHex, Color.WHITE)
-      paint.alpha = (motion.alpha * 255).toInt()
+      paint.alpha = (motion.alpha * Color.alpha(paint.color)).toInt()
     }
     layout.draw(canvas)
     canvas.restore()

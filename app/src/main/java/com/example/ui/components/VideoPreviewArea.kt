@@ -118,7 +118,7 @@ fun VideoPreviewArea(
     contentAlignment = Alignment.Center
   ) {
     // Aspect Ratio Container
-    BoxWithConstraints(
+    Box(
       modifier = Modifier
         .aspectRatio(uiState.aspectRatio.ratioFloat)
         .clip(RoundedCornerShape(14.dp))

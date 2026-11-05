@@ -15,6 +15,9 @@ import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
@@ -31,8 +34,17 @@ fun TextToolsPanel(
   onChange: (TextTrackItem) -> Unit, onDone: () -> Unit,
   onDuplicate: () -> Unit, onDelete: () -> Unit, onMoveLayer: (Int) -> Unit
 ) {
+  val inputFocus = remember { FocusRequester() }
+  val keyboard = LocalSoftwareKeyboardController.current
   var tab by remember(track.id) { mutableStateOf("Style") }
   LaunchedEffect(editRequest) { if (editRequest > 0) tab = "Edit" }
+  LaunchedEffect(tab, editRequest) {
+    if (tab == "Edit" && editRequest > 0) {
+      androidx.compose.runtime.withFrameNanos {}
+      inputFocus.requestFocus()
+      keyboard?.show()
+    }
+  }
   val panelHeight = (LocalConfiguration.current.screenHeightDp * 0.27f).coerceIn(100f, 235f).dp
   Surface(color = CapCutSurface) {
     Column(Modifier.navigationBarsPadding().imePadding()) {
@@ -52,7 +64,7 @@ fun TextToolsPanel(
           "Edit" -> {
             OutlinedTextField(
               track.text, { onChange(track.copy(text = it.take(2000))) },
-              modifier = Modifier.fillMaxWidth().testTag("text_content"), label = { Text("Text") }, minLines = 2, maxLines = 4
+              modifier = Modifier.fillMaxWidth().focusRequester(inputFocus).testTag("text_content"), label = { Text("Text") }, minLines = 2, maxLines = 4
             )
             Text("Drag to move · Pinch to resize · Twist or drag the corner to rotate",
               style = MaterialTheme.typography.bodySmall, color = CapCutTextSecondary)

@@ -821,7 +821,14 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
       opacity = track.opacity.coerceIn(0f, 1f), strokeWidth = track.strokeWidth.coerceIn(0f, 5f),
       text = track.text.take(2000)
     )
-    _uiState.update { it.copy(textTracks = it.textTracks.map { item -> if (item.id == safe.id) safe else item }) }
+    _uiState.update {
+      val changedTiming = it.textTracks.firstOrNull { item -> item.id == safe.id }
+        ?.let { previous -> previous.startMs != safe.startMs || previous.endMs != safe.endMs } == true
+      it.copy(
+        textTracks = it.textTracks.map { item -> if (item.id == safe.id) safe else item },
+        currentTimeMs = if (changedTiming && it.selectedTextId == safe.id) it.currentTimeMs.coerceIn(safe.startMs, safe.endMs - 1) else it.currentTimeMs
+      )
+    }
   }
 
   fun duplicateSelectedText() {
