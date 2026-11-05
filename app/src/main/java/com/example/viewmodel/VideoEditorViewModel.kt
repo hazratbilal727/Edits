@@ -179,7 +179,7 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
       EditorUiState(
         currentProjectId = id, projectTitle = projectTitle, clips = newClips,
         totalDurationMs = calculateTotalDuration(newClips),
-        selectedClipId = newClips.firstOrNull()?.id,
+        selectedClipId = null,
         resolutionSetting = previous.resolutionSetting
       )
     }

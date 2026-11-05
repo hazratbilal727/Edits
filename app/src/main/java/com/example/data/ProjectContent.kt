@@ -24,7 +24,7 @@ data class ProjectContent(
     audioTracks = audioTracks, textTracks = textTracks, aspectRatio = aspectRatio,
     selectedFilter = filter, filterIntensity = filterIntensity,
     adjustSettings = adjustments, resolutionSetting = resolution,
-    totalDurationMs = clips.sumOf { it.timelineDurationMs }, selectedClipId = clips.firstOrNull()?.id
+    totalDurationMs = clips.sumOf { it.timelineDurationMs }, selectedClipId = null
   )
 
   companion object {

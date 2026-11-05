@@ -163,6 +163,7 @@ class EditorUiTest {
 
   @Test fun timelineHandleTrimsRealClipDuration() {
     val model = editor(360, 800)
+    compose.onNodeWithTag("timeline_clip_photo").performClick()
     compose.onNodeWithTag("timeline_trim_start", useUnmergedTree = true).performTouchInput {
       swipe(center, center + androidx.compose.ui.geometry.Offset(50f, 0f), 400)
     }
