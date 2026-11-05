@@ -3,6 +3,9 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -23,6 +26,15 @@ jobs:
           gradle-version: '9.3.1'
       - name: Install Android SDK
         run: sdkmanager "platforms;android-36.1" "build-tools;36.0.0"
+      - name: Generate Gradle wrapper
+        run: gradle wrapper --gradle-version 9.3.1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gradle-wrapper
+          path: |
+            gradlew
+            gradlew.bat
+            gradle/wrapper/
       - name: Compile and test Android app
         run: gradle :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --stacktrace
       - uses: actions/upload-artifact@v4
