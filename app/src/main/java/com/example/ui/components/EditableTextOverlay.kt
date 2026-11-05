@@ -48,8 +48,8 @@ fun EditableTextOverlay(
         val hit = visible.asReversed().firstOrNull { track ->
           val point = renderer.localPoint(track, PointF(down.position.x, down.position.y), size.width, size.height)
           val box = renderer.geometry(track, size.width)
-          abs(point.x) <= box.width / 2 + 18.dp.toPx() / track.scale &&
-            abs(point.y) <= box.height / 2 + 18.dp.toPx() / track.scale
+          abs(point.x) <= box.width / 2 + 36.dp.toPx() / track.scale &&
+            abs(point.y) <= box.height / 2 + 36.dp.toPx() / track.scale
         }
         if (hit != null) {
           down.consume()
@@ -57,8 +57,8 @@ fun EditableTextOverlay(
           val local = renderer.localPoint(hit, PointF(down.position.x, down.position.y), size.width, size.height)
           val box = renderer.geometry(hit, size.width)
           val handle = hit.id == latestSelected &&
-            abs(local.x - box.width / 2) < 24.dp.toPx() / hit.scale &&
-            abs(local.y - box.height / 2) < 24.dp.toPx() / hit.scale
+            abs(local.x - box.width / 2 - 14.dp.toPx() / hit.scale) < 16.dp.toPx() / hit.scale &&
+            abs(local.y - box.height / 2 - 14.dp.toPx() / hit.scale) < 16.dp.toPx() / hit.scale
           var draft: TextTrackItem = hit
           var changed = false
           val center = Offset(hit.posX * size.width, hit.posY * size.height)
@@ -118,7 +118,9 @@ fun EditableTextOverlay(
       rotate(selected.rotation, center) {
         drawRect(CapCutTeal, Offset(center.x - width / 2, center.y - height / 2),
           androidx.compose.ui.geometry.Size(width, height), style = Stroke(1.5.dp.toPx()))
-        val corner = Offset(center.x + width / 2, center.y + height / 2)
+        val borderCorner = Offset(center.x + width / 2, center.y + height / 2)
+        val corner = borderCorner + Offset(14.dp.toPx(), 14.dp.toPx())
+        drawLine(CapCutTeal, borderCorner, corner, 1.dp.toPx())
         drawCircle(Color.Black, 13.dp.toPx(), corner)
         drawCircle(CapCutTeal, 13.dp.toPx(), corner, style = Stroke(2.dp.toPx()))
         drawLine(CapCutTeal, corner - Offset(5.dp.toPx(), 5.dp.toPx()), corner + Offset(5.dp.toPx(), 5.dp.toPx()), 2.dp.toPx())
