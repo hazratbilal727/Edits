@@ -11,6 +11,11 @@ import com.example.ui.components.SubtitleEditorDialog
 import com.example.ui.components.LocalAudioPlayback
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -164,13 +169,8 @@ fun CapCutEditorScreen(
     },
     containerColor = CapCutBackground
   ) { paddingValues ->
-    Column(
-      modifier = Modifier
-        .fillMaxSize()
-        .padding(paddingValues)
-        .background(CapCutBackground)
-    ) {
-      // 1. Video Preview Area (Weighted 1f)
+    val preview: @Composable (Modifier) -> Unit = { previewModifier ->
+
       VideoPreviewArea(
         uiState = uiState,
         onTogglePlayPause = { viewModel.togglePlayPause() },
@@ -185,9 +185,11 @@ fun CapCutEditorScreen(
           viewModel.pausePlayback()
           viewModel.showToast(error)
         },
-        modifier = Modifier.weight(1f)
+        modifier = previewModifier
       )
 
+    }
+    val timeline: @Composable () -> Unit = {
       // 2. Interactive Precision Timeline View
       if (!uiState.isFullscreen) TimelineView(
         uiState = uiState,
@@ -217,6 +219,25 @@ fun CapCutEditorScreen(
         onRemoveText = { viewModel.removeTextTrack(it) },
         modifier = Modifier.fillMaxWidth()
       )
+    }
+    BoxWithConstraints(Modifier.fillMaxSize().padding(paddingValues)) {
+      when {
+        uiState.isFullscreen -> preview(Modifier.fillMaxSize())
+        maxWidth >= 600.dp && maxWidth > maxHeight -> {
+          Row(Modifier.fillMaxSize()) {
+            preview(Modifier.weight(1f).fillMaxSize())
+            Column(Modifier.width(maxWidth * 0.48f).fillMaxSize()) {
+              timeline()
+            }
+          }
+        }
+        else -> {
+          Column(Modifier.fillMaxSize()) {
+            preview(Modifier.weight(1f))
+            timeline()
+          }
+        }
+      }
     }
 
     uiState.audioTracks.firstOrNull { it.id == audioId && it.uriString != null }?.let { track ->
