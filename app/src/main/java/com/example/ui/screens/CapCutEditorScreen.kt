@@ -13,6 +13,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.unit.dp
@@ -72,6 +75,7 @@ fun CapCutEditorScreen(
     uiState.selectedFilter, uiState.filterIntensity, uiState.adjustSettings,
     uiState.resolutionSetting, uiState.projectTitle, uiState.canUndo, uiState.canRedo
   ) { uiState }
+  val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
   val context = LocalContext.current
   var showCaptionTools by remember { mutableStateOf(false) }
   var subtitleId by remember { mutableStateOf<String?>(null) }
@@ -114,7 +118,7 @@ fun CapCutEditorScreen(
   Scaffold(modifier = Modifier.testTag("editor_screen"),
     snackbarHost = { SnackbarHost(snackbarHostState) },
     topBar = {
-      if (!uiState.isFullscreen) CapCutTopBar(
+      if (!uiState.isFullscreen && !keyboardVisible) CapCutTopBar(
         uiState = toolState,
         onBack = leaveEditor,
         onUndo = { viewModel.undo() },
@@ -225,7 +229,7 @@ fun CapCutEditorScreen(
     }
     val timeline: @Composable () -> Unit = {
       // 2. Interactive Precision Timeline View
-      if (!uiState.isFullscreen) TimelineView(
+      if (!uiState.isFullscreen && !keyboardVisible) TimelineView(
         uiState = uiState,
         onSeekTo = { viewModel.seekTo(it) },
         onScrubStarted = viewModel::pausePlayback,

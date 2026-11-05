@@ -55,6 +55,8 @@ class EditorUiTest {
   }
 
   private fun capture(name: String) {
+    compose.mainClock.advanceTimeBy(500)
+    compose.waitForIdle()
     val target = File("build/ui-previews/$name.png")
     target.parentFile.mkdirs()
     compose.onNodeWithTag(if (name == "home") "home_screen" else "editor_screen").captureRoboImage(target.absolutePath)

@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
@@ -35,6 +36,7 @@ fun TextToolsPanel(
   onDuplicate: () -> Unit, onDelete: () -> Unit, onMoveLayer: (Int) -> Unit
 ) {
   val inputFocus = remember { FocusRequester() }
+  val focusManager = LocalFocusManager.current
   val keyboard = LocalSoftwareKeyboardController.current
   var tab by remember(track.id) { mutableStateOf("Style") }
   LaunchedEffect(editRequest) { if (editRequest > 0) tab = "Edit" }
@@ -51,13 +53,13 @@ fun TextToolsPanel(
       Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
         Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp)) {
           listOf("Edit", "Style", "Animate", "Timing").forEach { name ->
-            TextButton(onClick = { tab = name }) { Text(name, color = if (tab == name) CapCutTeal else CapCutTextSecondary) }
+            TextButton(onClick = { tab = name; if (name != "Edit") { focusManager.clearFocus(); keyboard?.hide() } }) { Text(name, color = if (tab == name) CapCutTeal else CapCutTextSecondary) }
           }
         }
-        IconButton(onClick = onDone, modifier = Modifier.testTag("text_done")) { Icon(Icons.Default.Check, "Finish text editing") }
+        IconButton(onClick = { focusManager.clearFocus(); keyboard?.hide(); onDone() }, modifier = Modifier.testTag("text_done")) { Icon(Icons.Default.Check, "Finish text editing") }
       }
       Column(
-        Modifier.fillMaxWidth().heightIn(max = panelHeight).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+        Modifier.fillMaxWidth().heightIn(max = if (tab == "Edit") 128.dp else panelHeight).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
       ) {
         when (tab) {
@@ -103,7 +105,7 @@ fun TextToolsPanel(
               TextButton(enabled = validHex, onClick = { onChange(track.copy(colorHex = hex)) }) { Text("Apply") }
             }
             ColorChoices("Background", track.backgroundHex, true) { onChange(track.copy(backgroundHex = it)) }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
               FilterChip(track.bold, { onChange(track.copy(bold = !track.bold)) }, label = { Text("Bold") })
               FilterChip(track.italic, { onChange(track.copy(italic = !track.italic)) }, label = { Text("Italic") })
               FilterChip(track.shadow, { onChange(track.copy(shadow = !track.shadow)) }, label = { Text("Shadow") })
@@ -114,6 +116,9 @@ fun TextToolsPanel(
             TextSlider("Opacity", track.opacity, 0f..1f) { onChange(track.copy(opacity = it)) }
             TextSlider("Letter spacing", track.letterSpacing, -0.03f..0.3f) { onChange(track.copy(letterSpacing = it)) }
             TextSlider("Line spacing", track.lineSpacing, 0.9f..1.8f) { onChange(track.copy(lineSpacing = it)) }
+            TextSlider("Scale", track.scale, 0.25f..6f) { onChange(track.copy(scale = it)) }
+            TextSlider("Horizontal position", track.posX, 0.02f..0.98f) { onChange(track.copy(posX = it)) }
+            TextSlider("Vertical position", track.posY, 0.02f..0.98f) { onChange(track.copy(posY = it)) }
             TextSlider("Rotation", normalizedRotation(track.rotation), -180f..180f) { onChange(track.copy(rotation = it)) }
             Row {
               TextButton(onClick = { onChange(track.copy(posX = 0.5f, posY = 0.5f, scale = 1f, rotation = 0f)) }) { Text("Center & reset transform") }
@@ -172,10 +177,10 @@ private fun ColorChoices(label: String, selected: String, transparent: Boolean =
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
       if (transparent) TextButton(onClick = { onSelect("#00000000") }) { Text("None") }
       listOf("#FFFFFF", "#000000", "#00E5FF", "#FFD166", "#FF4D4F", "#FF80AB", "#B388FF", "#69F0AE", "#2979FF", "#FF9100").forEach { hex ->
-        Box(Modifier.size(44.dp).padding(5.dp).border(if (selected.equals(hex, true)) 2.dp else 1.dp,
+        Box(Modifier.size(44.dp).clickable { onSelect(hex) }.padding(5.dp).border(if (selected.equals(hex, true)) 2.dp else 1.dp,
           if (selected.equals(hex, true)) CapCutTeal else CapCutTextSecondary, CircleShape)
           .padding(4.dp).background(Color(TextLayerRenderer.parse(hex, android.graphics.Color.WHITE)), CircleShape)
-          .clickable { onSelect(hex) }.semantics { contentDescription = "$label $hex" }.testTag("color_$hex"))
+          .semantics { contentDescription = "$label $hex" }.testTag("color_$hex"))
       }
     }
   }
