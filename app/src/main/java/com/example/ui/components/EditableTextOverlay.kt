@@ -60,6 +60,8 @@ fun EditableTextOverlay(
             abs(local.x - box.width / 2 - 14.dp.toPx() / hit.scale) < 16.dp.toPx() / hit.scale &&
             abs(local.y - box.height / 2 - 14.dp.toPx() / hit.scale) < 16.dp.toPx() / hit.scale
           var draft: TextTrackItem = hit
+          var rawX = hit.posX
+          var rawY = hit.posY
           var changed = false
           val center = Offset(hit.posX * size.width, hit.posY * size.height)
           val initialVector = down.position - center
@@ -81,8 +83,10 @@ fun EditableTextOverlay(
                   rotation = (hit.rotation + Math.toDegrees((angle - initialAngle).toDouble()).toFloat()) % 360f
                 )
               } else {
-                val x = (draft.posX + pan.x / size.width).coerceIn(0.02f, 0.98f)
-                val y = (draft.posY + pan.y / size.height).coerceIn(0.02f, 0.98f)
+                rawX = (rawX + pan.x / size.width).coerceIn(0.02f, 0.98f)
+                val x = rawX
+                rawY = (rawY + pan.y / size.height).coerceIn(0.02f, 0.98f)
+                val y = rawY
                 draft.copy(
                   posX = if (abs(x - 0.5f) < 0.008f) 0.5f else x,
                   posY = if (abs(y - 0.5f) < 0.008f) 0.5f else y,
@@ -108,7 +112,7 @@ fun EditableTextOverlay(
     }
   ) {
     val visible = tracks.filter { timeMs in it.startMs until it.endMs }
-    visible.forEach { renderer.draw(drawContext.canvas.nativeCanvas, it, timeMs, !playing && it.id == selectedId) }
+    visible.forEach { renderer.draw(drawContext.canvas.nativeCanvas, it, timeMs, !playing && it.id == selectedId, size.width.toInt(), size.height.toInt()) }
     val selected = visible.firstOrNull { it.id == selectedId }
     if (selected != null && !playing) {
       val box = renderer.geometry(selected, size.width.toInt())

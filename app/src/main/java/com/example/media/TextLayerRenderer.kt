@@ -93,15 +93,15 @@ class TextLayerRenderer {
     return result
   }
 
-  fun draw(canvas: Canvas, track: TextTrackItem, timeMs: Long, editing: Boolean = false) {
+  fun draw(canvas: Canvas, track: TextTrackItem, timeMs: Long, editing: Boolean = false, frameWidth: Int = canvas.width, frameHeight: Int = canvas.height) {
     val motion = textMotion(track, timeMs, editing)
-    val layout = layout(track, canvas.width, motion.visibleCharacters)
-    val padding = canvas.width / 360f * 6f
+    val layout = layout(track, frameWidth, motion.visibleCharacters)
+    val padding = frameWidth / 360f * 6f
     val width = layout.width + padding * 2
     val height = layout.height + padding * 2
     val paint = layout.paint
     canvas.save()
-    canvas.translate(track.posX * canvas.width, (track.posY + motion.offsetY) * canvas.height)
+    canvas.translate(track.posX * frameWidth, (track.posY + motion.offsetY) * frameHeight)
     canvas.rotate(track.rotation)
     canvas.scale(track.scale * motion.scale, track.scale * motion.scale)
     canvas.translate(-width / 2f, -height / 2f)
@@ -113,11 +113,11 @@ class TextLayerRenderer {
     paint.style = Paint.Style.FILL
     paint.color = parse(track.colorHex, Color.WHITE)
     paint.alpha = (motion.alpha * Color.alpha(paint.color)).toInt()
-    if (track.shadow) paint.setShadowLayer(canvas.width / 180f, 0f, canvas.width / 360f, Color.BLACK)
+    if (track.shadow) paint.setShadowLayer(frameWidth / 180f, 0f, frameWidth / 360f, Color.BLACK)
     else paint.clearShadowLayer()
     if (track.strokeWidth > 0) {
       paint.style = Paint.Style.STROKE
-      paint.strokeWidth = track.strokeWidth * canvas.width / 360f
+      paint.strokeWidth = track.strokeWidth * frameWidth / 360f
       paint.strokeJoin = Paint.Join.ROUND
       paint.color = parse(track.strokeHex, Color.BLACK)
       paint.alpha = (motion.alpha * Color.alpha(paint.color)).toInt()

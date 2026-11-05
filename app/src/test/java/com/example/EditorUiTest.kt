@@ -90,6 +90,7 @@ class EditorUiTest {
     val model = editor(360, 800)
     compose.runOnIdle { model.addTextTrack("Touch title") }
     compose.waitForIdle()
+    capture("editor-text-before-drag")
     val initial = model.uiState.value.textTracks.single()
     compose.onNodeWithTag("text_layer_canvas", useUnmergedTree = true).performTouchInput {
       val start = androidx.compose.ui.geometry.Offset(width * initial.posX, height * initial.posY)

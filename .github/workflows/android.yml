@@ -37,6 +37,9 @@ jobs:
             gradle/wrapper/
       - name: Compile and test Android app
         run: gradle :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --stacktrace
+      - name: Report failing tests
+        if: failure()
+        run: grep -A 20 '<failure' app/build/test-results/testDebugUnitTest/TEST-*.xml || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
