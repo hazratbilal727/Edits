@@ -49,6 +49,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -83,6 +85,24 @@ fun VideoPreviewArea(
     uiState.clips.takeWhile { it.id != currentClip?.id }.sumOf { it.timelineDurationMs }
   }
   val previewColors = remember(uiState.selectedFilter, uiState.filterIntensity, uiState.adjustSettings) { OfflineComposition.colorEffects(uiState) }
+  val photoColors = remember(uiState.selectedFilter, uiState.filterIntensity, uiState.adjustSettings) {
+    val settings = uiState.adjustSettings
+    val filter = uiState.selectedFilter
+    val saturation = (1f + settings.saturation / 100f + (filter.saturationMultiplier - 1f) * uiState.filterIntensity).coerceIn(0f, 2f)
+    val contrast = (settings.contrast / 100f + (filter.contrastMultiplier - 1f) * uiState.filterIntensity).coerceIn(-0.99f, 0.99f)
+    val multiplier = (1f + contrast) / (1f - contrast)
+    val brightness = settings.brightness / 100f + (filter.brightnessMultiplier - 1f) * uiState.filterIntensity
+    val warmth = settings.warmth / 250f
+    val matrix = ColorMatrix()
+    matrix.setToSaturation(saturation)
+    val values = matrix.values
+    for (row in 0..2) {
+      val gain = multiplier * when (row) { 0 -> 1f + warmth; 2 -> 1f - warmth; else -> 1f }
+      for (column in 0..3) values[row * 5 + column] *= gain
+      values[row * 5 + 4] = (brightness + (1f - multiplier) * 0.5f) * 255f
+    }
+    ColorFilter.colorMatrix(matrix)
+  }
   val localTime = uiState.currentTimeMs - timelineStart
 
   Box(
@@ -127,6 +147,7 @@ fun VideoPreviewArea(
           AsyncImage(
             model = uri,
             contentDescription = "Selected Photo",
+            colorFilter = photoColors,
             contentScale = ContentScale.Fit,
             modifier = Modifier
               .fillMaxSize()

@@ -281,6 +281,7 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
   }
 
   fun onMainToolClicked(tool: MainTool) {
+    pausePlayback()
     when (tool) {
       MainTool.EDIT -> {
         val selected = _uiState.value.selectedClipId ?: _uiState.value.clips.firstOrNull()?.id
@@ -367,17 +368,19 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
   }
 
   fun deleteSelectedClip() {
-    saveSnapshot()
     val selectedId = _uiState.value.selectedClipId ?: return
     val remaining = _uiState.value.clips.filter { it.id != selectedId }
     if (remaining.isEmpty()) {
       showToast("Cannot delete the only clip")
       return
     }
+    saveSnapshot()
+    pausePlayback()
     val total = calculateTotalDuration(remaining)
     _uiState.update {
       it.copy(
         clips = remaining,
+        currentTimeMs = it.currentTimeMs.coerceAtMost(total),
         totalDurationMs = total,
         selectedClipId = remaining.firstOrNull()?.id,
         activeSubMenu = SubMenuType.NONE
@@ -482,6 +485,7 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
   }
 
   fun setClipVolume(newVolume: Float) {
+    saveSnapshot()
     val selectedId = _uiState.value.selectedClipId ?: return
     val updated = _uiState.value.clips.map {
       if (it.id == selectedId) it.copy(volume = newVolume) else it
@@ -656,10 +660,12 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
   }
 
   fun setFilterIntensity(intensity: Float) {
+    saveSnapshot()
     _uiState.update { it.copy(filterIntensity = intensity) }
   }
 
   fun updateAdjustSettings(adjustSettings: AdjustSettings) {
+    saveSnapshot()
     _uiState.update { it.copy(adjustSettings = adjustSettings) }
   }
 

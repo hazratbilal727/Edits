@@ -166,7 +166,8 @@ fun TimelineView(
         )
         .padding(bottom = 10.dp)
     ) {
-      val center = maxWidth / 2
+      val availableWidth = maxWidth
+      val center = availableWidth / 2
       val laneWidth = trackWidth + 48.dp
       Row(
         Modifier.horizontalScroll(scroll, enabled = false).padding(start = center, end = center)
@@ -174,7 +175,7 @@ fun TimelineView(
         Column(Modifier.width(laneWidth), verticalArrangement = Arrangement.spacedBy(5.dp)) {
           TimelineRuler(
             scrollPosition = { scroll.value },
-            viewportWidth = with(LocalDensity.current) { maxWidth.toPx() },
+            viewportWidth = with(LocalDensity.current) { availableWidth.toPx() },
             leadingSpace = with(LocalDensity.current) { center.toPx() },
             widthDpPerSecond = zoom,
             durationMs = uiState.totalDurationMs,

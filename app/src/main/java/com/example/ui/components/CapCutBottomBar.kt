@@ -208,7 +208,7 @@ fun CapCutBottomBar(
 
       SubMenuType.VOLUME -> {
         // Volume Adjustment Slider
-        val currentVol = uiState.selectedClip?.volume ?: 1.0f
+        var currentVol by remember(uiState.selectedClipId, uiState.selectedClip?.volume) { mutableStateOf(uiState.selectedClip?.volume ?: 1f) }
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
           Row(
             modifier = Modifier.fillMaxWidth(),
@@ -222,7 +222,8 @@ fun CapCutBottomBar(
           }
           Slider(
             value = currentVol,
-            onValueChange = { onSetVolume(it) },
+            onValueChange = { currentVol = it },
+            onValueChangeFinished = { onSetVolume(currentVol) },
             valueRange = 0.0f..2.0f,
             colors = SliderDefaults.colors(thumbColor = CapCutTeal, activeTrackColor = CapCutTeal)
           )
@@ -317,9 +318,12 @@ fun CapCutBottomBar(
             else -> uiState.adjustSettings.warmth
           }
 
+          var sliderValue by remember(selectedAdjustmentTab, currentVal) { mutableStateOf(currentVal) }
           Slider(
-            value = currentVal,
-            onValueChange = { newVal ->
+            value = sliderValue,
+            onValueChange = { sliderValue = it },
+            onValueChangeFinished = {
+              val newVal = sliderValue
               val updated = when (selectedAdjustmentTab) {
                 "Brightness" -> uiState.adjustSettings.copy(brightness = newVal)
                 "Contrast" -> uiState.adjustSettings.copy(contrast = newVal)

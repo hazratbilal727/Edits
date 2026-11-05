@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
 import com.example.viewmodel.EditorUiState
 
@@ -38,14 +39,14 @@ fun CapCutTopBar(
         }
         Spacer(Modifier.weight(1f))
         TextButton(onClick = onOpenResolutionSheet, modifier = Modifier.testTag("resolution_picker_pill")) {
-          Text(uiState.resolutionSetting.label, maxLines = 1)
+          Text(uiState.resolutionSetting.label, maxLines = 1, fontSize = 12.sp)
           Icon(Icons.Default.KeyboardArrowDown, null, Modifier.size(16.dp))
         }
         Button(
           onClick = onExport, enabled = uiState.clips.isNotEmpty(),
-          contentPadding = PaddingValues(horizontal = 14.dp),
+          contentPadding = PaddingValues(horizontal = 8.dp),
           modifier = Modifier.padding(end = 8.dp).testTag("export_button")
-        ) { Text("Export") }
+        ) { Text("Export", fontSize = 12.sp) }
       }
       TextButton(
         onClick = { renaming = true },

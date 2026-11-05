@@ -143,7 +143,7 @@ fun CapCutMediaPickerScreen(isPhotoModeOnly: Boolean, onClose: () -> Unit, onMed
               "${index + 1}", Modifier.align(Alignment.TopStart).padding(8.dp).background(CapCutBackground).padding(6.dp),
               color = CapCutTeal
             )
-            IconButton(onClick = { sources = sources - clip.uriString }, modifier = Modifier.align(Alignment.TopEnd)) {
+            IconButton(onClick = { sources = sources.filterNot { it == clip.uriString } }, modifier = Modifier.align(Alignment.TopEnd)) {
               Icon(Icons.Default.Close, "Remove ${clip.title}", tint = CapCutTeal)
             }
             Text(

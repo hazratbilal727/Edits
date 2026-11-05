@@ -230,12 +230,13 @@ fun CapCutEditorScreen(
       )
     }
     BoxWithConstraints(Modifier.fillMaxSize().padding(paddingValues)) {
+      val availableWidth = maxWidth
       when {
         uiState.isFullscreen -> preview(Modifier.fillMaxSize())
         maxWidth >= 600.dp && maxWidth > maxHeight -> {
           Row(Modifier.fillMaxSize()) {
             preview(Modifier.weight(1f).fillMaxSize())
-            Column(Modifier.width(maxWidth * 0.48f).fillMaxSize()) {
+            Column(Modifier.width(availableWidth * 0.48f).fillMaxSize()) {
               timeline()
             }
           }
