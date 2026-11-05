@@ -92,7 +92,7 @@ class EditorUiTest {
     compose.waitForIdle()
     val initial = model.uiState.value.textTracks.single()
     compose.onNodeWithTag("text_layer_canvas").performTouchInput {
-      val start = androidx.compose.ui.geometry.Offset(size.width * initial.posX, size.height * initial.posY)
+      val start = androidx.compose.ui.geometry.Offset(width * initial.posX, height * initial.posY)
       swipe(start, start + androidx.compose.ui.geometry.Offset(20f, -20f), 350)
     }
     compose.runOnIdle {
@@ -103,7 +103,7 @@ class EditorUiTest {
     }
     val styled = compose.runOnIdle { model.uiState.value.textTracks.single() }
     compose.onNodeWithTag("text_layer_canvas").performTouchInput {
-      val center = androidx.compose.ui.geometry.Offset(size.width * styled.posX, size.height * styled.posY)
+      val center = androidx.compose.ui.geometry.Offset(width * styled.posX, height * styled.posY)
       down(0, center + androidx.compose.ui.geometry.Offset(-15f, 0f))
       down(1, center + androidx.compose.ui.geometry.Offset(15f, 0f))
       moveTo(0, center + androidx.compose.ui.geometry.Offset(-22f, -10f))
