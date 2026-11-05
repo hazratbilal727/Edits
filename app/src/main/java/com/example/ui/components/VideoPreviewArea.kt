@@ -12,6 +12,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import com.example.media.cleanupEffect
+import com.example.media.OfflineComposition
+import androidx.media3.common.Effect
 import com.example.model.VideoClip
 import com.example.model.TransformKeyframe
 import com.example.model.speedSegments
@@ -63,6 +65,7 @@ import com.example.ui.theme.CapCutTextPrimary
 import com.example.ui.theme.CapCutTextSecondary
 import com.example.viewmodel.EditorUiState
 
+@androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun VideoPreviewArea(
   uiState: EditorUiState,
@@ -79,6 +82,7 @@ fun VideoPreviewArea(
   val timelineStart = remember(uiState.clips, currentClip?.id) {
     uiState.clips.takeWhile { it.id != currentClip?.id }.sumOf { it.timelineDurationMs }
   }
+  val previewColors = remember(uiState.selectedFilter, uiState.filterIntensity, uiState.adjustSettings) { OfflineComposition.colorEffects(uiState) }
   val localTime = uiState.currentTimeMs - timelineStart
 
   Box(
@@ -109,6 +113,7 @@ fun VideoPreviewArea(
           LocalVideoPreview(
             clip = currentClip,
             positionMs = sourceMs - currentClip.startMs,
+            colorEffects = previewColors,
             rate = segments.last { it.startMs <= sourceMs }.rate,
             transform = transform,
             playing = uiState.isPlaying,
@@ -165,15 +170,6 @@ fun VideoPreviewArea(
             )
           }
         }
-      }
-
-      // 2. Filter Tone Tint Overlay
-      if (uiState.selectedFilter.colorTone != 0L) {
-        Box(
-          modifier = Modifier
-            .fillMaxSize()
-            .background(Color(uiState.selectedFilter.colorTone).copy(alpha = 0.35f * uiState.filterIntensity))
-        )
       }
 
       val fadeLevel = currentClip?.fadeLevelAt(localTime) ?: 1f
@@ -278,6 +274,7 @@ private fun LocalVideoPreview(
   clip: VideoClip,
   positionMs: Long,
   rate: Float,
+  colorEffects: List<Effect>,
   transform: TransformKeyframe,
   playing: Boolean,
   muted: Boolean,
@@ -319,7 +316,7 @@ private fun LocalVideoPreview(
       )
       .build()
   }
-  val videoEffects = remember(clip.chromaKey, clip.videoDenoise) { listOfNotNull(clip.cleanupEffect()) }
+  val videoEffects = remember(clip.chromaKey, clip.videoDenoise, colorEffects) { listOfNotNull(clip.cleanupEffect()) + colorEffects }
   LaunchedEffect(player, videoEffects) {
     player.setVideoEffects(videoEffects)
   }

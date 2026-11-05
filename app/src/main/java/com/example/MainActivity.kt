@@ -1,6 +1,10 @@
 package com.example
 
 import android.os.Bundle
+import android.widget.Toast
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -19,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -49,9 +54,17 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun CapCutApp(editorViewModel: VideoEditorViewModel = viewModel()) {
-  var currentScreen by remember { mutableStateOf(Screen.HOME) }
-  var isPhotoModeOnly by remember { mutableStateOf(false) }
-  var isAppendingMedia by remember { mutableStateOf(false) }
+  val appContext = LocalContext.current
+  val editorState by editorViewModel.uiState.collectAsState()
+  LaunchedEffect(editorState.toastMessage) {
+    editorState.toastMessage?.let {
+      Toast.makeText(appContext, it, Toast.LENGTH_LONG).show()
+      editorViewModel.clearToast()
+    }
+  }
+  var currentScreen by rememberSaveable { mutableStateOf(Screen.HOME) }
+  var isPhotoModeOnly by rememberSaveable { mutableStateOf(false) }
+  var isAppendingMedia by rememberSaveable { mutableStateOf(false) }
 
   BackHandler(enabled = currentScreen != Screen.HOME) {
     currentScreen = if (isAppendingMedia) Screen.EDITOR else Screen.HOME
@@ -92,9 +105,7 @@ fun CapCutApp(editorViewModel: VideoEditorViewModel = viewModel()) {
               isAppendingMedia = false
               currentScreen = Screen.MEDIA_PICKER
             },
-            onOpenProject = { projectId ->
-              currentScreen = Screen.EDITOR
-            }
+            onOpenProject = { projectId -> editorViewModel.openProject(projectId) { currentScreen = Screen.EDITOR } }
           )
         }
 

@@ -8,6 +8,13 @@ import androidx.media3.transformer.Transformer
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
+import com.example.data.AppDatabase
+import com.example.data.ProjectContent
+import com.example.data.ProjectCodec
+import com.example.data.ProjectEntity
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.debounce
 import com.example.media.OfflineComposition
 import com.example.media.reframeFaces
 import java.io.File
@@ -42,6 +49,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 
+@OptIn(kotlinx.coroutines.FlowPreview::class)
 @androidx.annotation.OptIn(UnstableApi::class)
 class VideoEditorViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -65,45 +73,59 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
     }
   }
 
+  private val projectDao = AppDatabase.getDatabase(application).projectDao()
+
   init {
-    loadDefaultDemoClips()
+    viewModelScope.launch {
+      _uiState.map(ProjectContent::from).distinctUntilChanged().debounce(600).collect { content ->
+        if (content != null) persistProject(content)
+      }
+    }
   }
 
-  fun loadDefaultDemoClips() {
-    val sampleClips = listOf(
-      VideoClip(
-        id = "demo_clip_1",
-        title = "Sunset Coast.mp4",
-        startMs = 0L,
-        endMs = 4000L,
-        originalDurationMs = 4000L,
-        isVideo = true,
-        speed = 1.0f,
-        volume = 1.0f
-      ),
-      VideoClip(
-        id = "demo_clip_2",
-        title = "Urban Motion.mp4",
-        startMs = 0L,
-        endMs = 3500L,
-        originalDurationMs = 3500L,
-        isVideo = true,
-        speed = 1.0f,
-        volume = 1.0f,
-        transitionAfter = TransitionType.DISSOLVE
-      ),
-      VideoClip(
-        id = "demo_clip_3",
-        title = "Night Lights.mp4",
-        startMs = 0L,
-        endMs = 4500L,
-        originalDurationMs = 4500L,
-        isVideo = true,
-        speed = 1.0f,
-        volume = 1.0f
-      )
-    )
-    loadClips(sampleClips)
+  private suspend fun persistProject(content: ProjectContent) {
+    try {
+      val json = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { ProjectCodec.encode(content) }
+      projectDao.insertProject(ProjectEntity(
+        content.id, content.title, content.clips.sumOf { it.timelineDurationMs },
+        content.clips.firstOrNull()?.uriString, content.clips.size,
+        content.aspectRatio.name, System.currentTimeMillis(), json
+      ))
+    } catch (error: kotlinx.coroutines.CancellationException) {
+      throw error
+    } catch (_: Exception) {
+      showToast("Could not save this project. Check device storage.")
+    }
+  }
+
+  fun saveProject() {
+    val content = ProjectContent.from(_uiState.value) ?: return
+    viewModelScope.launch { persistProject(content) }
+  }
+
+  fun renameProject(title: String) {
+    val trimmed = title.trim().take(80)
+    if (trimmed.isEmpty()) return
+    saveSnapshot()
+    _uiState.update { it.copy(projectTitle = trimmed) }
+  }
+
+  fun openProject(id: String, onLoaded: () -> Unit) {
+    viewModelScope.launch {
+      try {
+        val entity = requireNotNull(projectDao.getProjectById(id))
+        val content = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { ProjectCodec.decode(entity.clipsJson) }
+        pausePlayback()
+        undoStack.clear()
+        redoStack.clear()
+        _uiState.value = content.editorState()
+        onLoaded()
+      } catch (error: kotlinx.coroutines.CancellationException) {
+        throw error
+      } catch (_: Exception) {
+        showToast("This project could not be opened. Its saved media or edit data may be unavailable.")
+      }
+    }
   }
 
   private fun saveSnapshot() {
@@ -127,7 +149,8 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
     val current = _uiState.value
     redoStack.add(current)
     val previous = undoStack.removeAt(undoStack.lastIndex)
-    _uiState.value = previous
+    pausePlayback()
+    _uiState.value = previous.copy(isPlaying = false, showExportDialog = false)
     updateUndoRedoStatus()
     showToast("Undo performed")
   }
@@ -137,7 +160,8 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
     val current = _uiState.value
     undoStack.add(current)
     val next = redoStack.removeAt(redoStack.lastIndex)
-    _uiState.value = next
+    pausePlayback()
+    _uiState.value = next.copy(isPlaying = false, showExportDialog = false)
     updateUndoRedoStatus()
     showToast("Redo performed")
   }
@@ -149,6 +173,7 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
     val total = calculateTotalDuration(newClips)
     _uiState.update {
       it.copy(
+        currentProjectId = UUID.randomUUID().toString(),
         projectTitle = projectTitle,
         audioTracks = emptyList(),
         textTracks = emptyList(),

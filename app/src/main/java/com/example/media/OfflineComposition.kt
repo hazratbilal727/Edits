@@ -88,7 +88,7 @@ object OfflineComposition {
         val ratio = state.aspectRatio.ratioFloat
         val shortEdge = when (state.resolutionSetting.label) {
           "720P" -> 720
-          "2K/4K" -> 1440
+          "4K" -> 2160
           else -> 1080
         }
         val width = if (ratio >= 1f) (shortEdge * ratio / 2).roundToInt() * 2 else shortEdge
@@ -122,7 +122,7 @@ object OfflineComposition {
           .setRemoveAudio(state.isMuted || clip.volume == 0f)
           .setEffects(Effects(audioGain(clip.volume), effects))
           .apply {
-            if (!clip.isVideo) setFrameRate(state.resolutionSetting.fps)
+            setFrameRate(state.resolutionSetting.fps)
             if (segment.rate != 1f) {
               setSpeed(object : SpeedProvider {
                 override fun getSpeed(timeUs: Long): Float = segment.rate
@@ -169,7 +169,7 @@ object OfflineComposition {
     }
   )
 
-  private fun colorEffects(state: EditorUiState): List<Effect> = buildList {
+  fun colorEffects(state: EditorUiState): List<Effect> = buildList {
     val adjust = state.adjustSettings
     val filter = state.selectedFilter
     val intensity = state.filterIntensity

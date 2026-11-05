@@ -75,9 +75,10 @@ fun CapCutEditorScreen(
   var clipDialog by remember { mutableStateOf<String?>(null) }
   val snackbarHostState = remember { SnackbarHostState() }
 
-  LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.pausePlayback() }
+  LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.pausePlayback(); viewModel.saveProject() }
   val leaveEditor = {
     viewModel.pausePlayback()
+    viewModel.saveProject()
     onNavigateBack()
   }
   BackHandler {
@@ -91,14 +92,6 @@ fun CapCutEditorScreen(
     }
   }
 
-  // Toast message trigger
-  LaunchedEffect(uiState.toastMessage) {
-    uiState.toastMessage?.let { msg ->
-      Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-      viewModel.clearToast()
-    }
-  }
-
   Scaffold(
     snackbarHost = { SnackbarHost(snackbarHostState) },
     topBar = {
@@ -108,7 +101,8 @@ fun CapCutEditorScreen(
         onUndo = { viewModel.undo() },
         onRedo = { viewModel.redo() },
         onOpenResolutionSheet = { viewModel.openResolutionSheet(true) },
-        onExport = { viewModel.triggerExport() }
+        onExport = { viewModel.triggerExport() },
+        onRename = viewModel::renameProject
       )
     },
     bottomBar = {
