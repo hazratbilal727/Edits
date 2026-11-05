@@ -16,10 +16,11 @@ data class ProjectContent(
   val filterIntensity: Float,
   val adjustments: AdjustSettings,
   val resolution: ResolutionSetting,
-  val coverUri: String? = null
+  val coverUri: String? = null,
+  val isMuted: Boolean = false
 ) {
   fun editorState() = EditorUiState(
-    currentProjectId = id, projectTitle = title, clips = clips, coverUri = coverUri,
+    currentProjectId = id, projectTitle = title, clips = clips, coverUri = coverUri, isMuted = isMuted,
     audioTracks = audioTracks, textTracks = textTracks, aspectRatio = aspectRatio,
     selectedFilter = filter, filterIntensity = filterIntensity,
     adjustSettings = adjustments, resolutionSetting = resolution,
@@ -32,7 +33,7 @@ data class ProjectContent(
       return ProjectContent(
         id, state.projectTitle, state.clips.map { it.copy(isSelected = false) },
         state.audioTracks, state.textTracks, state.aspectRatio,
-        state.selectedFilter, state.filterIntensity, state.adjustSettings, state.resolutionSetting, state.coverUri
+        state.selectedFilter, state.filterIntensity, state.adjustSettings, state.resolutionSetting, state.coverUri, state.isMuted
       )
     }
   }

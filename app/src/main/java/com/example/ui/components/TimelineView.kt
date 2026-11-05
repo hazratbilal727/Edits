@@ -54,6 +54,7 @@ fun TimelineView(
   onScrubStarted: () -> Unit,
   onScrubbingChange: (Boolean) -> Unit,
   onSelectClip: (String) -> Unit,
+  onDeselect: () -> Unit,
   onOpenTransition: (String) -> Unit,
   onAppendMediaClick: () -> Unit,
   onTogglePlayPause: () -> Unit,
@@ -102,6 +103,7 @@ fun TimelineView(
       }
     }
   }
+  LaunchedEffect(uiState.isPlaying) { if (uiState.isPlaying) scroll.stopScroll() }
   DisposableEffect(Unit) { onDispose { scrubbing(false) } }
 
   val spans = remember(uiState.clips) {
@@ -125,7 +127,7 @@ fun TimelineView(
       }
       IconButton(onClick = { zoom = (zoom / 1.4f).coerceAtLeast(24f) }, enabled = zoom > 24f,
         modifier = Modifier.testTag("timeline_zoom_out")) { Icon(Icons.Default.Remove, "Zoom out timeline") }
-      IconButton(onClick = { zoom = (zoom * 1.4f).coerceAtMost(240f) }, enabled = zoom < 240f,
+      IconButton(onClick = { zoom = (zoom * 1.4f).coerceAtMost(960f) }, enabled = zoom < 960f,
         modifier = Modifier.testTag("timeline_zoom_in")) { Icon(Icons.Default.Add, "Zoom in timeline") }
     }
 
@@ -140,12 +142,13 @@ fun TimelineView(
               if (event.changes.count { it.pressed } >= 2) {
                 pause()
                 val factor = event.calculateZoom()
-                if (factor != 1f) zoom = (zoom * factor).coerceIn(24f, 240f)
+                if (factor != 1f) zoom = (zoom * factor).coerceIn(24f, 960f)
                 event.changes.forEach { it.consume() }
               }
             } while (event.changes.any { it.pressed })
           }
-        }.testTag("timeline_scrub_surface")
+        }.pointerInput(onDeselect) { detectTapGestures(onTap = { onDeselect() }) }
+        .testTag("timeline_scrub_surface")
     ) {
       val viewportWidth = constraints.maxWidth.toFloat()
       val origin = viewportWidth / 2f - (uiState.currentTimeMs * pxPerMs).toFloat()
@@ -192,10 +195,12 @@ fun TimelineView(
               }
             }
             val end = origin + (uiState.totalDurationMs * pxPerMs).toFloat()
-            if (end > -44 && end < viewportWidth) {
+            val buttonSize = with(density) { 44.dp.toPx() }
+            val buttonX = minOf(end + with(density) { 8.dp.toPx() }, viewportWidth - buttonSize - with(density) { 8.dp.toPx() }).coerceAtLeast(0f)
+            if (uiState.clips.isNotEmpty()) {
               IconButton(
                 onClick = onAppendMediaClick,
-                modifier = Modifier.offset { IntOffset(end.roundToInt() + with(density) { 8.dp.toPx() }.roundToInt(), 0) }
+                modifier = Modifier.offset { IntOffset(buttonX.roundToInt(), 0) }
                   .align(Alignment.CenterStart).size(44.dp).background(CapCutTextPrimary, RoundedCornerShape(10.dp))
                   .testTag("timeline_append_media_button")
               ) { Icon(Icons.Default.Add, "Add media", tint = CapCutBackground, modifier = Modifier.size(28.dp)) }
@@ -276,7 +281,7 @@ private fun ViewportRuler(position: Long, duration: Long, zoom: Float, onSeek: (
     }
   }) {
     val major = when { zoom < 40f -> 5000L; zoom < 110f -> 2000L; else -> 1000L }
-    val half = major / 2
+    val half = if (zoom > 400f) 100L else major / 2
     val startTime = position - size.width / 2 / scale
     val first = floor(startTime / half).toLong().coerceAtLeast(0)
     val last = ceil((position + size.width / 2 / scale) / half).toLong().coerceAtMost(duration / half)
@@ -284,7 +289,7 @@ private fun ViewportRuler(position: Long, duration: Long, zoom: Float, onSeek: (
     for (index in first..last) {
       val at = index * half
       val x = size.width / 2 + (at - position) * scale
-      if (index % 2L == 0L) {
+      if (at % major == 0L) {
         drawContext.canvas.nativeCanvas.drawText(formatTime(at), x, 13.dp.toPx(), paint)
       } else drawCircle(CapCutTextSecondary, 1.2.dp.toPx(), Offset(x, 10.dp.toPx()))
     }

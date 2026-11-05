@@ -122,6 +122,7 @@ class EditorUiTest {
 
   @Test fun timelineAddsTextMutesClipAndScrubs() {
     val model = editor(360, 800)
+    compose.onNodeWithTag("timeline_append_media_button").assertIsDisplayed()
     compose.onNodeWithTag("timeline_add_audio", useUnmergedTree = true).assertIsDisplayed()
     compose.onNodeWithTag("timeline_add_text", useUnmergedTree = true).assertIsDisplayed()
     compose.onNodeWithTag("timeline_clip_mute", useUnmergedTree = true).performClick()

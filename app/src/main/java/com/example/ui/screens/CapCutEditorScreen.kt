@@ -243,6 +243,7 @@ fun CapCutEditorScreen(
           }
           viewModel.selectClip(id)
         },
+        onDeselect = { viewModel.deselectClip(); viewModel.finishTextEditing() },
         onOpenTransition = { viewModel.openTransitionDialog(it) },
         onAppendMediaClick = onOpenMediaPickerForAppend,
         onTogglePlayPause = { viewModel.togglePlayPause() },

@@ -12,15 +12,16 @@ class ProjectContentTest {
     val clip = VideoClip("clip", "Video", endMs = 5000, originalDurationMs = 5000,
       uriString = "content://media/external/video/1", speedPoints = listOf(SpeedPoint(2000, 0.5f)),
       transformKeyframes = listOf(TransformKeyframe(0), TransformKeyframe(4000, 2f)),
-      chromaKey = ChromaKey(), fadeOutMs = 300)
+      chromaKey = ChromaKey(), fadeOutMs = 300, isMuted = true)
     val state = EditorUiState(
-      currentProjectId = "saved", projectTitle = "A saved edit", coverUri = "file:///cover.jpg", clips = listOf(clip),
+      currentProjectId = "saved", projectTitle = "A saved edit", coverUri = "file:///cover.jpg", isMuted = true, clips = listOf(clip),
       textTracks = listOf(TextTrackItem("caption", "Caption", 500, 2500)),
       audioTracks = listOf(AudioTrackItem("audio", "Music", 0, 4000, uriString = "file:///music.wav", sourceDurationMs = 5000, sourceOffsetMs = 1000)),
       aspectRatio = AspectRatioOption.RATIO_16_9, adjustSettings = AdjustSettings(contrast = 20f)
     )
     val content = requireNotNull(ProjectContent.from(state))
     val restored = ProjectCodec.decode(ProjectCodec.encode(content)).editorState()
+    assertEquals(state.isMuted, restored.isMuted)
     assertEquals(state.coverUri, restored.coverUri)
     assertEquals(state.clips, restored.clips)
     assertEquals(state.audioTracks, restored.audioTracks)
