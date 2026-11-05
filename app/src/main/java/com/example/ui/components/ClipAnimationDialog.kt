@@ -53,7 +53,7 @@ fun ClipAnimationDialog(
     onDismissRequest = onDismiss,
     title = { Text(if (editSpeed) "Speed Curve" else "Transform Keyframes") },
     text = {
-      Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+      EditorDialogContent {
         Text("Source time ${seconds(source)} s")
         Slider(
           value = sourceOffset,

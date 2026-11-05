@@ -13,7 +13,7 @@ fun TransitionsDialog(onDismiss: () -> Unit, onApply: (TransitionType, Long) -> 
     onDismissRequest = onDismiss,
     title = { Text("Between clips") },
     text = {
-      Column {
+      EditorDialogContent {
         FilterChip(selected = !fade, onClick = { fade = false }, label = { Text("Straight cut") })
         FilterChip(selected = fade, onClick = { fade = true }, label = { Text("Fade through black") })
         if (fade) {

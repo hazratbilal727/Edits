@@ -29,7 +29,7 @@ fun SubtitleEditorDialog(
     onDismissRequest = onDismiss,
     title = { Text("Edit caption") },
     text = {
-      Column {
+      EditorDialogContent {
         OutlinedTextField(text, { text = it }, label = { Text("Caption") }, maxLines = 4)
         OutlinedTextField(start, { start = it }, label = { Text("Start (ms)") }, singleLine = true)
         OutlinedTextField(end, { end = it }, label = { Text("End (ms)") }, singleLine = true)

@@ -43,6 +43,7 @@ import com.example.model.SubMenuType
 import com.example.model.speedSegments
 import com.example.model.sourceTimeAt
 import com.example.ui.components.ClipAnimationDialog
+import com.example.ui.components.EditorDialogContent
 import com.example.ui.components.VideoCleanupDialog
 import com.example.ui.components.AddTextDialog
 import com.example.ui.components.CapCutBottomBar
@@ -266,7 +267,7 @@ fun CapCutEditorScreen(
         onDismissRequest = { showCaptionTools = false },
         title = { Text("Captions") },
         text = {
-          Column {
+          EditorDialogContent {
             Text("Tap a caption in the timeline to edit its text and timing.")
             TextButton(onClick = {
               showCaptionTools = false
@@ -303,7 +304,7 @@ fun CapCutEditorScreen(
       AlertDialog(
         onDismissRequest = { clipDialog = null }, title = { Text("Canvas format") },
         text = {
-          Column {
+          EditorDialogContent {
             AspectRatioOption.entries.forEach { ratio ->
               TextButton(onClick = { viewModel.setAspectRatio(ratio); clipDialog = null }) {
                 Text((if (ratio == uiState.aspectRatio) "✓  " else "") + ratio.label)
@@ -317,7 +318,7 @@ fun CapCutEditorScreen(
       AlertDialog(
         onDismissRequest = { clipDialog = null }, title = { Text("Clip effects") },
         text = {
-          Column {
+          EditorDialogContent {
             Text("Choose a clip in the timeline, then apply an effect.")
             listOf("Chroma Key", "Noise Reduction", "Auto Reframe", "Video Fade", "Keyframes").forEach { effect ->
               TextButton(enabled = clip != null && (clip.isVideo || effect in listOf("Keyframes", "Video Fade")),
@@ -373,7 +374,7 @@ fun CapCutEditorScreen(
         onDismissRequest = { clipDialog = null },
         title = { Text("Video Fade") },
         text = {
-          Column {
+          EditorDialogContent {
             Text("Fade in from black · ${fadeIn.toInt()} ms")
             Slider(fadeIn, { fadeIn = it }, valueRange = 0f..maxFade)
             Text("Fade out to black · ${fadeOut.toInt()} ms")

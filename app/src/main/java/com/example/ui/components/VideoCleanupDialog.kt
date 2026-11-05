@@ -32,7 +32,7 @@ fun VideoCleanupDialog(
     onDismissRequest = onDismiss,
     title = { Text(if (editChroma) "Chroma Key" else "Video Noise Reduction") },
     text = {
-      Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+      EditorDialogContent {
         if (editChroma) {
           Text("Screen color")
           Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

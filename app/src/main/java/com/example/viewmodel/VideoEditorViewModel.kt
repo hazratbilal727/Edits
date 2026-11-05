@@ -793,12 +793,14 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
   }
 
   fun addTextTrack(text: String, colorHex: String = "#FFFFFF", fontSizeSp: Float = 26f) {
+    if (text.isBlank() || _uiState.value.totalDurationMs < 100) return
+    val start = _uiState.value.currentTimeMs.coerceAtMost(_uiState.value.totalDurationMs - 100)
     saveSnapshot()
     val newTrack = TextTrackItem(
       id = UUID.randomUUID().toString(),
-      text = text,
-      startMs = _uiState.value.currentTimeMs,
-      endMs = (_uiState.value.currentTimeMs + 3500L).coerceAtMost(_uiState.value.totalDurationMs),
+      text = text.trim(),
+      startMs = start,
+      endMs = (start + 3500L).coerceAtMost(_uiState.value.totalDurationMs),
       colorHex = colorHex,
       fontSizeSp = fontSizeSp
     )

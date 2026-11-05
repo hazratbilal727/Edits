@@ -86,7 +86,7 @@ fun LocalAudioDialog(
     onDismissRequest = onDismiss,
     title = { Text(track.title) },
     text = {
-      Column {
+      EditorDialogContent {
         Text("Set the audio range on the project timeline. Source audio starts at the beginning of the file.")
         OutlinedTextField(start, { start = it }, label = { Text("Start (ms)") }, singleLine = true)
         OutlinedTextField(end, { end = it }, label = { Text("End (ms)") }, singleLine = true)
