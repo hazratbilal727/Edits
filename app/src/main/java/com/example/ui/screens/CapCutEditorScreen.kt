@@ -246,6 +246,21 @@ fun CapCutEditorScreen(
         onOpenTransition = { viewModel.openTransitionDialog(it) },
         onAppendMediaClick = onOpenMediaPickerForAppend,
         onTogglePlayPause = { viewModel.togglePlayPause() },
+        onAddAudio = {
+          viewModel.pausePlayback()
+          importAudio.launch(arrayOf("audio/*"))
+        },
+        onAddText = {
+          viewModel.pausePlayback()
+          viewModel.addTextTrack("Your text")
+          textEditRequest++
+        },
+        onToggleClipMute = viewModel::toggleTimelineClipMute,
+        onEditCover = { viewModel.pausePlayback(); clipDialog = "Cover" },
+        onBeginEdit = viewModel::beginTimelineEdit,
+        onTrimClip = viewModel::trimTimelineClip,
+        onAudioTiming = viewModel::setTimelineAudioTiming,
+        onTextTiming = viewModel::setTimelineTextTiming,
         onEditAudio = { id ->
           viewModel.pausePlayback()
           audioId = id
@@ -331,7 +346,26 @@ fun CapCutEditorScreen(
 
     val tool = clipDialog
     val clip = uiState.selectedClip
-    if (tool == "Format") {
+    if (tool == "Cover") {
+      val coverClip = uiState.currentClipAtPlayhead
+      AlertDialog(
+        onDismissRequest = { clipDialog = null },
+        title = { Text("Project cover") },
+        text = {
+          EditorDialogContent {
+            Text("Use the frame at the playhead as the cover shown in your project library.")
+            Text("Close this dialog and scrub the timeline to choose another frame.")
+          }
+        },
+        confirmButton = {
+          TextButton(enabled = coverClip?.uriString != null, onClick = {
+            viewModel.useCurrentFrameAsCover()
+            clipDialog = null
+          }) { Text("Use this frame") }
+        },
+        dismissButton = { TextButton(onClick = { clipDialog = null }) { Text("Cancel") } }
+      )
+    } else if (tool == "Format") {
       AlertDialog(
         onDismissRequest = { clipDialog = null }, title = { Text("Canvas format") },
         text = {

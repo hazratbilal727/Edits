@@ -72,3 +72,18 @@ fun VideoClip.fadeLevelAt(localMs: Long): Float {
   val fadeOut = if (fadeOutMs > 0) (timelineDurationMs - position).toFloat() / minOf(fadeOutMs, timelineDurationMs) else 1f
   return minOf(fadeIn, fadeOut).coerceIn(0f, 1f)
 }
+
+/** Applies timeline handle movement in source coordinates, including variable clip speed. */
+fun VideoClip.trimAtTimelineOffset(leftEdge: Boolean, deltaMs: Long): Pair<Long, Long> {
+  if (!isVideo) {
+    return if (leftEdge) (startMs + deltaMs).coerceIn(0L, endMs - 100) to endMs
+    else startMs to (endMs + deltaMs).coerceIn(startMs + 100, 60000L)
+  }
+  val full = copy(startMs = 0L, endMs = originalDurationMs)
+  val segments = full.speedSegments()
+  val source = if (leftEdge) startMs else endMs
+  val timeline = segments.timelineTimeAt(source)
+  val target = segments.sourceTimeAt((timeline + deltaMs).coerceIn(0L, full.timelineDurationMs))
+  return if (leftEdge) target.coerceIn(0L, endMs - 100) to endMs
+  else startMs to target.coerceIn(startMs + 100, originalDurationMs)
+}

@@ -142,7 +142,7 @@ fun VideoPreviewArea(
             rate = segments.last { it.startMs <= sourceMs }.rate,
             transform = transform,
             playing = uiState.isPlaying,
-            muted = uiState.isMuted,
+            muted = uiState.isMuted || currentClip.isMuted,
             scrubbing = isScrubbing,
             onBuffering = onBuffering,
             onError = onPlaybackError

@@ -23,6 +23,7 @@ val AVAILABLE_FILTERS = listOf(
 
 data class EditorUiState(
   val currentProjectId: String? = null,
+  val coverUri: String? = null,
   val projectTitle: String = "New Project",
   val currentTimeMs: Long = 0L,
   val totalDurationMs: Long = 0L,

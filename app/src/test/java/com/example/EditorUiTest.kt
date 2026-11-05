@@ -59,7 +59,7 @@ class EditorUiTest {
     compose.waitForIdle()
     val target = File("build/ui-previews/$name.png")
     target.parentFile.mkdirs()
-    compose.onNodeWithTag(if (name == "home") "home_screen" else "editor_screen").captureRoboImage(target.absolutePath)
+    compose.onNodeWithTag(when { name == "home" -> "home_screen"; name.startsWith("timeline-") -> "mobile_timeline"; else -> "editor_screen" }).captureRoboImage(target.absolutePath)
   }
 
   @Test fun portraitEditorAndCrop() {
@@ -118,6 +118,44 @@ class EditorUiTest {
     }
     compose.onNodeWithTag("text_done").assertIsDisplayed()
     capture("editor-text-tools")
+  }
+
+  @Test fun timelineAddsTextMutesClipAndScrubs() {
+    val model = editor(360, 800)
+    compose.onNodeWithTag("timeline_add_audio", useUnmergedTree = true).assertIsDisplayed()
+    compose.onNodeWithTag("timeline_add_text", useUnmergedTree = true).assertIsDisplayed()
+    compose.onNodeWithTag("timeline_clip_mute", useUnmergedTree = true).performClick()
+    compose.runOnIdle { assertTrue(model.uiState.value.clips.single().isMuted) }
+    capture("timeline-reference")
+    compose.onNodeWithTag("timeline_scrub_surface", useUnmergedTree = true).performTouchInput {
+      swipe(androidx.compose.ui.geometry.Offset(width * 0.75f, height - 4f),
+        androidx.compose.ui.geometry.Offset(width * 0.25f, height - 4f), 400)
+    }
+    compose.runOnIdle { assertTrue(model.uiState.value.currentTimeMs > 0L) }
+    compose.onNodeWithTag("timeline_add_text", useUnmergedTree = true).performClick()
+    compose.runOnIdle { assertEquals(1, model.uiState.value.textTracks.size) }
+  }
+
+  @Test fun timelineHandleTrimsRealClipDuration() {
+    val model = editor(360, 800)
+    compose.onNodeWithTag("timeline_trim_start", useUnmergedTree = true).performTouchInput {
+      swipe(center, center + androidx.compose.ui.geometry.Offset(50f, 0f), 400)
+    }
+    compose.runOnIdle {
+      assertTrue(model.uiState.value.clips.single().startMs > 0)
+      assertTrue(model.uiState.value.totalDurationMs < 6000)
+    }
+  }
+
+  @Test fun longTimelineOnlyMeasuresVisibleMedia() {
+    val model = editor(360, 800)
+    compose.runOnIdle {
+      val clip = model.uiState.value.clips.single().copy(endMs = 86400000L, originalDurationMs = 86400000L)
+      model.loadClips(listOf(clip))
+      model.seekTo(43200000L)
+    }
+    compose.onNodeWithTag("timeline_clip_photo").assertIsDisplayed()
+    compose.onNodeWithTag("timeline_play_pause_button").assertIsDisplayed()
   }
 
   @Test fun homeStartsMediaImport() {

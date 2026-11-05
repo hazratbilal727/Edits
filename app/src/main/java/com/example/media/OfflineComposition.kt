@@ -119,7 +119,7 @@ object OfflineComposition {
         }
 
         EditedMediaItem.Builder(media.build())
-          .setRemoveAudio(state.isMuted || clip.volume == 0f)
+          .setRemoveAudio(state.isMuted || clip.isMuted || clip.volume == 0f)
           .setEffects(Effects(audioGain(clip.volume), effects))
           .apply {
             setFrameRate(state.resolutionSetting.fps)
@@ -140,7 +140,7 @@ object OfflineComposition {
       if (duration <= 0 || track.isMuted || track.volume <= 0f) return@mapNotNull null
       val media = MediaItem.Builder()
         .setUri(Uri.parse(source))
-        .setClippingConfiguration(MediaItem.ClippingConfiguration.Builder().setEndPositionMs(duration).build())
+        .setClippingConfiguration(MediaItem.ClippingConfiguration.Builder().setStartPositionMs(track.sourceOffsetMs).setEndPositionMs(track.sourceOffsetMs + duration).build())
         .build()
       val item = EditedMediaItem.Builder(media)
         .setRemoveVideo(true)

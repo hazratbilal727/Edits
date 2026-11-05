@@ -69,7 +69,8 @@ data class VideoClip(
   val chromaKey: ChromaKey? = null,
   val videoDenoise: Float = 0f,
   val fadeInMs: Long = 0L,
-  val fadeOutMs: Long = 0L
+  val fadeOutMs: Long = 0L,
+  val isMuted: Boolean = false
 ) {
   val durationMs: Long
     get() = (endMs - startMs).coerceAtLeast(100L)
@@ -86,7 +87,8 @@ data class AudioTrackItem(
   val isMuted: Boolean = false,
   val category: String = "BGM",
   val uriString: String? = null,
-  val sourceDurationMs: Long = 0L
+  val sourceDurationMs: Long = 0L,
+  val sourceOffsetMs: Long = 0L
 ) {
   val durationMs: Long
     get() = (endMs - startMs).coerceAtLeast(100L)

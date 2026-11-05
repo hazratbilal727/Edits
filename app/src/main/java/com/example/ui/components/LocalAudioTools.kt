@@ -30,7 +30,7 @@ fun LocalAudioPlayback(state: EditorUiState, onError: () -> Unit) {
     val localPosition = state.currentTimeMs - track.startMs
     if (duration > 0 && localPosition in -750L until duration && !track.isMuted && track.volume > 0f) {
       androidx.compose.runtime.key(track.id) {
-        LocalTrackPlayer(source, localPosition, state.isPlaying, if (state.isMuted) 0f else track.volume, onError)
+        LocalTrackPlayer(source, localPosition.coerceAtLeast(0) + track.sourceOffsetMs, state.isPlaying && localPosition >= 0, if (state.isMuted) 0f else track.volume, onError)
       }
     }
   }
@@ -81,13 +81,13 @@ fun LocalAudioDialog(
   val from = start.toLongOrNull()
   val to = end.toLongOrNull()
   val valid = from != null && to != null && from >= 0 && to <= projectDuration &&
-    to > from && to - from <= track.sourceDurationMs
+    to > from && to - from <= track.sourceDurationMs - track.sourceOffsetMs
   AlertDialog(
     onDismissRequest = onDismiss,
     title = { Text(track.title) },
     text = {
       EditorDialogContent {
-        Text("Set the audio range on the project timeline. Source audio starts at the beginning of the file.")
+        Text("Set the range on the project timeline. Source starts at ${track.sourceOffsetMs} ms.")
         OutlinedTextField(start, { start = it }, label = { Text("Start (ms)") }, singleLine = true)
         OutlinedTextField(end, { end = it }, label = { Text("End (ms)") }, singleLine = true)
         Text("Volume ${(volume * 100).toInt()}%")

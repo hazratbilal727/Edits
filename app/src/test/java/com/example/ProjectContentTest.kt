@@ -14,13 +14,14 @@ class ProjectContentTest {
       transformKeyframes = listOf(TransformKeyframe(0), TransformKeyframe(4000, 2f)),
       chromaKey = ChromaKey(), fadeOutMs = 300)
     val state = EditorUiState(
-      currentProjectId = "saved", projectTitle = "A saved edit", clips = listOf(clip),
+      currentProjectId = "saved", projectTitle = "A saved edit", coverUri = "file:///cover.jpg", clips = listOf(clip),
       textTracks = listOf(TextTrackItem("caption", "Caption", 500, 2500)),
-      audioTracks = listOf(AudioTrackItem("audio", "Music", 0, 4000, uriString = "file:///music.wav", sourceDurationMs = 4000)),
+      audioTracks = listOf(AudioTrackItem("audio", "Music", 0, 4000, uriString = "file:///music.wav", sourceDurationMs = 5000, sourceOffsetMs = 1000)),
       aspectRatio = AspectRatioOption.RATIO_16_9, adjustSettings = AdjustSettings(contrast = 20f)
     )
     val content = requireNotNull(ProjectContent.from(state))
     val restored = ProjectCodec.decode(ProjectCodec.encode(content)).editorState()
+    assertEquals(state.coverUri, restored.coverUri)
     assertEquals(state.clips, restored.clips)
     assertEquals(state.audioTracks, restored.audioTracks)
     assertEquals(state.textTracks, restored.textTracks)

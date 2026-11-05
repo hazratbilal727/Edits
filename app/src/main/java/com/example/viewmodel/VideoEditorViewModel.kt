@@ -90,7 +90,7 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
       val json = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { ProjectCodec.encode(content) }
       projectDao.insertProject(ProjectEntity(
         content.id, content.title, content.clips.sumOf { it.timelineDurationMs },
-        content.clips.firstOrNull()?.uriString, content.clips.size,
+        content.coverUri ?: content.clips.firstOrNull()?.uriString, content.clips.size,
         content.aspectRatio.name, System.currentTimeMillis(), json
       ))
     } catch (error: kotlinx.coroutines.CancellationException) {
@@ -743,7 +743,7 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
   fun editLocalAudio(id: String, start: Long, end: Long, volume: Float) {
     val state = _uiState.value
     val track = state.audioTracks.firstOrNull { it.id == id && it.uriString != null } ?: return
-    if (start < 0 || end > state.totalDurationMs || end <= start || end - start > track.sourceDurationMs) return
+    if (start < 0 || end > state.totalDurationMs || end <= start || end - start > track.sourceDurationMs - track.sourceOffsetMs) return
     saveSnapshot()
     pausePlayback()
     _uiState.update {
@@ -787,6 +787,83 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
       } catch (error: kotlinx.coroutines.CancellationException) {
         throw error
       } catch (_: Exception) { showToast("Could not create this sound.") }
+    }
+  }
+
+  fun toggleTimelineClipMute(id: String) {
+    val clip = _uiState.value.clips.firstOrNull { it.id == id } ?: return
+    saveSnapshot()
+    _uiState.update { state ->
+      state.copy(clips = state.clips.map {
+        if (it.id != id) it
+        else if (clip.volume == 0f) it.copy(volume = 1f, isMuted = false)
+        else it.copy(isMuted = !clip.isMuted)
+      })
+    }
+  }
+
+  fun beginTimelineEdit() {
+    pausePlayback()
+    saveSnapshot()
+  }
+
+  fun trimTimelineClip(id: String, start: Long, end: Long) {
+    val state = _uiState.value
+    val clip = state.clips.firstOrNull { it.id == id } ?: return
+    val maximum = if (clip.isVideo) clip.originalDurationMs else 60000L
+    if (start < 0 || end - start < 100 || end > maximum) return
+    val updated = clip.copy(startMs = start, endMs = end, originalDurationMs = maxOf(clip.originalDurationMs, end))
+    val clips = state.clips.map { if (it.id == id) updated else it }
+    val duration = calculateTotalDuration(clips)
+    _uiState.update { it.copy(clips = clips, selectedClipId = id, selectedTextId = null,
+      totalDurationMs = duration, currentTimeMs = it.currentTimeMs.coerceAtMost(duration)) }
+  }
+
+  fun setTimelineTextTiming(id: String, start: Long, end: Long) {
+    if (start < 0 || end - start < 100 || end > _uiState.value.totalDurationMs) return
+    _uiState.update { it.copy(textTracks = it.textTracks.map { track ->
+      if (track.id == id) track.copy(startMs = start, endMs = end) else track
+    }) }
+  }
+
+  fun setTimelineAudioTiming(id: String, start: Long, end: Long, sourceOffset: Long) {
+    val track = _uiState.value.audioTracks.firstOrNull { it.id == id } ?: return
+    if (start < 0 || end - start < 100 || end > _uiState.value.totalDurationMs ||
+      sourceOffset < 0 || sourceOffset + end - start > track.sourceDurationMs) return
+    _uiState.update { it.copy(audioTracks = it.audioTracks.map { item ->
+      if (item.id == id) item.copy(startMs = start, endMs = end, sourceOffsetMs = sourceOffset) else item
+    }) }
+  }
+
+  fun useCurrentFrameAsCover() {
+    val state = _uiState.value
+    val clip = state.currentClipAtPlayhead ?: return
+    val source = clip.uriString ?: return
+    pausePlayback()
+    val clipStart = state.clips.takeWhile { it.id != clip.id }.sumOf { it.timelineDurationMs }
+    val frameTime = clip.speedSegments().sourceTimeAt(state.currentTimeMs - clipStart).coerceAtMost(clip.endMs - 1)
+    viewModelScope.launch {
+      try {
+        val cover = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+          if (!clip.isVideo) return@withContext source
+          val retriever = android.media.MediaMetadataRetriever()
+          try {
+            retriever.setDataSource(getApplication(), android.net.Uri.parse(source))
+            val frame = checkNotNull(retriever.getFrameAtTime(frameTime * 1000, android.media.MediaMetadataRetriever.OPTION_CLOSEST))
+            val file = File.createTempFile("cover-", ".jpg", getApplication<Application>().filesDir)
+            try {
+              file.outputStream().use { check(frame.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, it)) }
+              android.net.Uri.fromFile(file).toString()
+            } catch (error: Exception) { file.delete(); throw error }
+            finally { frame.recycle() }
+          } finally { retriever.release() }
+        }
+        if (_uiState.value.currentProjectId != state.currentProjectId) return@launch
+        saveSnapshot()
+        _uiState.update { it.copy(coverUri = cover) }
+        showToast("Project cover updated")
+      } catch (error: kotlinx.coroutines.CancellationException) { throw error }
+      catch (_: Exception) { showToast("Could not read this frame for the cover") }
     }
   }
 
