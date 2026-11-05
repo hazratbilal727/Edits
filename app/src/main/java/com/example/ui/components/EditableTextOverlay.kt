@@ -59,7 +59,7 @@ fun EditableTextOverlay(
           val handle = hit.id == latestSelected &&
             abs(local.x - box.width / 2) < 24.dp.toPx() / hit.scale &&
             abs(local.y - box.height / 2) < 24.dp.toPx() / hit.scale
-          var draft = hit
+          var draft: TextTrackItem = hit
           var changed = false
           val center = Offset(hit.posX * size.width, hit.posY * size.height)
           val initialVector = down.position - center
