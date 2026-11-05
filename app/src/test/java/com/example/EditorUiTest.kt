@@ -20,6 +20,7 @@ import com.example.ui.theme.CapCutTheme
 import com.example.viewmodel.VideoEditorViewModel
 import java.io.File
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -81,6 +82,25 @@ class EditorUiTest {
     compose.onNodeWithTag("video_preview_canvas").assertIsDisplayed()
     compose.onNodeWithTag("timeline_play_pause_button").assertIsDisplayed()
     capture("editor-landscape")
+  }
+
+  @Test fun textCanBeStyledAndMovedWithTouch() {
+    val model = editor(360, 800)
+    compose.runOnIdle { model.addTextTrack("Touch title") }
+    compose.waitForIdle()
+    val initial = model.uiState.value.textTracks.single()
+    compose.onNodeWithTag("text_layer_canvas").performTouchInput {
+      val start = androidx.compose.ui.geometry.Offset(size.width * initial.posX, size.height * initial.posY)
+      swipe(start, start + androidx.compose.ui.geometry.Offset(20f, -20f), 350)
+    }
+    compose.runOnIdle {
+      val moved = model.uiState.value.textTracks.single()
+      assertTrue(moved.posX > initial.posX)
+      assertTrue(moved.posY < initial.posY)
+      model.updateTextLayer(moved.copy(colorHex = "#00E5FF", rotation = 12f, backgroundHex = "#BB000000", entrance = "Fade"))
+    }
+    compose.onNodeWithTag("text_done").assertIsDisplayed()
+    capture("editor-text-tools")
   }
 
   @Test fun homeStartsMediaImport() {

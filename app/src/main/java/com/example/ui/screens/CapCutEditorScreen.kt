@@ -45,6 +45,7 @@ import com.example.model.speedSegments
 import com.example.model.sourceTimeAt
 import com.example.ui.components.ClipAnimationDialog
 import com.example.ui.components.EditorDialogContent
+import com.example.ui.components.TextToolsPanel
 import com.example.ui.components.VideoCleanupDialog
 import com.example.ui.components.AddTextDialog
 import com.example.ui.components.CapCutBottomBar
@@ -80,6 +81,8 @@ fun CapCutEditorScreen(
   val saveSrt = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/x-subrip")) { uri ->
     if (uri != null) viewModel.saveSubtitles(uri)
   }
+  var textEditRequest by remember { mutableStateOf(0) }
+  val selectedText = uiState.textTracks.firstOrNull { it.id == uiState.selectedTextId }
   var audioId by remember { mutableStateOf<String?>(null) }
   val importAudio = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
     if (uri != null) viewModel.importLocalAudio(uri)
@@ -96,7 +99,9 @@ fun CapCutEditorScreen(
     onNavigateBack()
   }
   BackHandler {
-    if (uiState.isFullscreen) {
+    if (uiState.selectedTextId != null) {
+      viewModel.finishTextEditing()
+    } else if (uiState.isFullscreen) {
       isScrubbing = false
       viewModel.toggleFullscreen()
     } else if (uiState.activeSubMenu != SubMenuType.NONE) {
@@ -120,11 +125,20 @@ fun CapCutEditorScreen(
       )
     },
     bottomBar = {
-      if (!uiState.isFullscreen) CapCutBottomBar(
+      if (!uiState.isFullscreen && selectedText != null) {
+        TextToolsPanel(
+          selectedText, uiState.totalDurationMs, textEditRequest,
+          onChange = viewModel::updateTextLayer, onDone = viewModel::finishTextEditing,
+          onDuplicate = viewModel::duplicateSelectedText,
+          onDelete = { viewModel.removeTextTrack(selectedText.id) },
+          onMoveLayer = viewModel::moveSelectedText
+        )
+      } else if (!uiState.isFullscreen) CapCutBottomBar(
         uiState = toolState,
         onMainToolClick = { tool ->
           viewModel.pausePlayback()
           when (tool) {
+            MainTool.TEXT -> { viewModel.addTextTrack("Your text"); textEditRequest++ }
             MainTool.RATIO -> clipDialog = "Format"
             MainTool.EFFECTS -> clipDialog = "Effects"
             else -> viewModel.onMainToolClicked(tool)
@@ -196,6 +210,10 @@ fun CapCutEditorScreen(
           viewModel.toggleFullscreen()
         },
         isScrubbing = isScrubbing,
+        onTextSelect = viewModel::selectText,
+        onTextEdit = { viewModel.selectText(it); textEditRequest++ },
+        onTextGestureStart = viewModel::beginTextTransform,
+        onTextTransform = viewModel::updateTextLayer,
         onBuffering = viewModel::setPreviewBuffering,
         onPlaybackError = { error ->
           viewModel.pausePlayback()
@@ -230,7 +248,8 @@ fun CapCutEditorScreen(
         onRemoveAudio = { viewModel.removeAudioTrack(it) },
         onEditText = { id ->
           viewModel.pausePlayback()
-          subtitleId = id
+          viewModel.selectText(id)
+          textEditRequest = 0
         },
         onRemoveText = { viewModel.removeTextTrack(it) },
         modifier = Modifier.fillMaxWidth()
@@ -277,7 +296,8 @@ fun CapCutEditorScreen(
             Text("Tap a caption in the timeline to edit its text and timing.")
             TextButton(onClick = {
               showCaptionTools = false
-              viewModel.showAddTextModal(true)
+              viewModel.addTextTrack("Your caption")
+              textEditRequest++
             }) { Text("Add caption") }
             TextButton(enabled = uiState.totalDurationMs > 0L, onClick = {
               showCaptionTools = false

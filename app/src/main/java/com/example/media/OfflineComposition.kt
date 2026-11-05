@@ -188,38 +188,12 @@ object OfflineComposition {
   }
 
   private fun captions(state: EditorUiState): CanvasOverlay = object : CanvasOverlay(true) {
-    private val layouts = LruCache<Pair<Int, String>, StaticLayout>(64)
-
-    private fun layout(width: Int, track: TextTrackItem): StaticLayout {
-      val key = width to track.id
-      layouts.get(key)?.let { return it }
-      val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-        typeface = Typeface.DEFAULT_BOLD
-        color = runCatching { Color.parseColor(track.colorHex) }.getOrDefault(Color.WHITE)
-        textSize = track.fontSizeSp * width / 360f
-        setShadowLayer(4f, 0f, 2f, Color.BLACK)
-      }
-      return StaticLayout.Builder.obtain(track.text, 0, track.text.length, paint, (width * 0.86f).toInt().coerceAtLeast(1))
-        .setAlignment(Layout.Alignment.ALIGN_CENTER)
-        .setIncludePad(false)
-        .build()
-        .also { layouts.put(key, it) }
-    }
-
+    private val renderer = TextLayerRenderer()
     override fun onDraw(canvas: Canvas, presentationTimeUs: Long) {
       canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
       val timeMs = presentationTimeUs / 1000
-      var bottom = canvas.height * 0.86f
-      state.textTracks.asReversed().forEach { track ->
-        if (timeMs in track.startMs until track.endMs) {
-          val layout = layout(canvas.width, track)
-          bottom -= layout.height
-          canvas.save()
-          canvas.translate((canvas.width - layout.width) / 2f, bottom)
-          layout.draw(canvas)
-          canvas.restore()
-          bottom -= canvas.width * 0.01f
-        }
+      state.textTracks.forEach { track ->
+        if (timeMs in track.startMs until track.endMs) renderer.draw(canvas, track, timeMs)
       }
     }
   }

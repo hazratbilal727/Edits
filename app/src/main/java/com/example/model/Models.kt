@@ -101,7 +101,24 @@ data class TextTrackItem(
   val colorHex: String = "#FFFFFF",
   val fontSizeSp: Float = 24f,
   val posX: Float = 0.5f,
-  val posY: Float = 0.7f
+  val posY: Float = 0.7f,
+  val scale: Float = 1f,
+  val rotation: Float = 0f,
+  val fontFamily: String = "sans-serif",
+  val bold: Boolean = true,
+  val italic: Boolean = false,
+  val alignment: String = "center",
+  val opacity: Float = 1f,
+  val strokeHex: String = "#000000",
+  val strokeWidth: Float = 0f,
+  val shadow: Boolean = true,
+  val backgroundHex: String = "#00000000",
+  val letterSpacing: Float = 0f,
+  val lineSpacing: Float = 1.05f,
+  val entrance: String = "None",
+  val exit: String = "None",
+  val loop: String = "None",
+  val animationDurationMs: Long = 400L
 ) {
   val durationMs: Long
     get() = (endMs - startMs).coerceAtLeast(100L)

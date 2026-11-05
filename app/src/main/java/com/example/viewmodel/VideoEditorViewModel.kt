@@ -797,6 +797,61 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
     }
   }
 
+  fun selectText(id: String?) {
+    pausePlayback()
+    val state = _uiState.value
+    val track = state.textTracks.firstOrNull { it.id == id }
+    if (track != null && state.selectedTextId != id) saveSnapshot()
+    _uiState.update {
+      it.copy(selectedTextId = track?.id, activeSubMenu = SubMenuType.NONE,
+        currentTimeMs = track?.let { text -> it.currentTimeMs.coerceIn(text.startMs, text.endMs - 1) } ?: it.currentTimeMs)
+    }
+  }
+
+  fun beginTextTransform() {
+    pausePlayback()
+    saveSnapshot()
+  }
+
+  fun updateTextLayer(track: TextTrackItem) {
+    if (track.startMs < 0 || track.endMs <= track.startMs || track.endMs > _uiState.value.totalDurationMs) return
+    val safe = track.copy(
+      fontSizeSp = track.fontSizeSp.coerceIn(8f, 96f), scale = track.scale.coerceIn(0.25f, 6f),
+      posX = track.posX.coerceIn(0.02f, 0.98f), posY = track.posY.coerceIn(0.02f, 0.98f),
+      opacity = track.opacity.coerceIn(0f, 1f), strokeWidth = track.strokeWidth.coerceIn(0f, 5f),
+      text = track.text.take(2000)
+    )
+    _uiState.update { it.copy(textTracks = it.textTracks.map { item -> if (item.id == safe.id) safe else item }) }
+  }
+
+  fun duplicateSelectedText() {
+    val state = _uiState.value
+    val track = state.textTracks.firstOrNull { it.id == state.selectedTextId } ?: return
+    saveSnapshot()
+    val copy = track.copy(id = UUID.randomUUID().toString(), posX = (track.posX + 0.04f).coerceAtMost(0.95f),
+      posY = (track.posY + 0.04f).coerceAtMost(0.95f))
+    _uiState.update { it.copy(textTracks = it.textTracks + copy, selectedTextId = copy.id) }
+  }
+
+  fun moveSelectedText(direction: Int) {
+    val state = _uiState.value
+    val index = state.textTracks.indexOfFirst { it.id == state.selectedTextId }
+    val target = index + direction
+    if (index < 0 || target !in state.textTracks.indices) return
+    saveSnapshot()
+    val tracks = state.textTracks.toMutableList()
+    val track = tracks.removeAt(index)
+    tracks.add(target, track)
+    _uiState.update { it.copy(textTracks = tracks) }
+  }
+
+  fun finishTextEditing() {
+    val selected = _uiState.value.selectedTextId
+    _uiState.update {
+      it.copy(selectedTextId = null, textTracks = it.textTracks.filterNot { track -> track.id == selected && track.text.isBlank() })
+    }
+  }
+
   fun addTextTrack(text: String, colorHex: String = "#FFFFFF", fontSizeSp: Float = 26f) {
     if (text.isBlank() || _uiState.value.totalDurationMs < 100) return
     val start = _uiState.value.currentTimeMs.coerceAtMost(_uiState.value.totalDurationMs - 100)
@@ -809,7 +864,7 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
       colorHex = colorHex,
       fontSizeSp = fontSizeSp
     )
-    _uiState.update { it.copy(textTracks = it.textTracks + newTrack, showAddTextDialog = false) }
+    _uiState.update { it.copy(textTracks = it.textTracks + newTrack, showAddTextDialog = false, selectedTextId = newTrack.id, activeSubMenu = SubMenuType.NONE) }
     showToast("Added text overlay")
   }
 
@@ -887,7 +942,7 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
 
   fun removeTextTrack(id: String) {
     saveSnapshot()
-    _uiState.update { it.copy(textTracks = it.textTracks.filter { t -> t.id != id }) }
+    _uiState.update { it.copy(textTracks = it.textTracks.filter { t -> t.id != id }, selectedTextId = if (it.selectedTextId == id) null else it.selectedTextId) }
     showToast("Removed text track")
   }
 

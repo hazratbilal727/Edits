@@ -15,6 +15,7 @@ import com.example.media.cleanupEffect
 import com.example.media.OfflineComposition
 import androidx.media3.common.Effect
 import com.example.model.VideoClip
+import com.example.model.TextTrackItem
 import com.example.model.TransformKeyframe
 import com.example.model.speedSegments
 import com.example.model.sourceTimeAt
@@ -77,6 +78,10 @@ fun VideoPreviewArea(
   onBuffering: (Boolean) -> Unit,
   onPlaybackError: (String) -> Unit,
   isScrubbing: Boolean,
+  onTextSelect: (String?) -> Unit,
+  onTextEdit: (String) -> Unit,
+  onTextGestureStart: () -> Unit,
+  onTextTransform: (TextTrackItem) -> Unit,
   modifier: Modifier = Modifier
 ) {
 
@@ -198,33 +203,16 @@ fun VideoPreviewArea(
         Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 1f - fadeLevel)))
       }
 
-      // 3. Text Overlay Tracks active at currentTimeMs
-      val activeTexts = uiState.textTracks.filter {
-        uiState.currentTimeMs in it.startMs until it.endMs
-      }
-      Column(
-        modifier = Modifier.align(Alignment.BottomCenter).padding(start = 16.dp, end = 16.dp, bottom = 55.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp)
-      ) {
-        activeTexts.forEach { textTrack ->
-          val textColor = runCatching { Color(android.graphics.Color.parseColor(textTrack.colorHex)) }
-            .getOrDefault(Color.White)
-          Text(
-            text = textTrack.text,
-            color = textColor,
-            fontSize = textTrack.fontSizeSp.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            modifier = Modifier
-              .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
-              .padding(horizontal = 8.dp, vertical = 4.dp)
-          )
-        }
-      }
+      EditableTextOverlay(
+        tracks = uiState.textTracks, selectedId = uiState.selectedTextId,
+        timeMs = uiState.currentTimeMs, playing = uiState.isPlaying,
+        onSelect = onTextSelect, onEdit = onTextEdit,
+        onGestureStart = onTextGestureStart, onTransform = onTextTransform,
+        modifier = Modifier.matchParentSize()
+      )
 
       // Playback affordance
-      if (!uiState.isPlaying && !isScrubbing && currentClip != null) {
+      if (!uiState.isPlaying && !isScrubbing && currentClip != null && uiState.selectedTextId == null) {
         Box(
           modifier = Modifier
             .size(54.dp)

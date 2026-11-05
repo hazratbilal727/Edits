@@ -29,6 +29,7 @@ data class EditorUiState(
   val isPlaying: Boolean = false,
   val isMuted: Boolean = false,
   val activeSubMenu: SubMenuType = SubMenuType.NONE,
+  val selectedTextId: String? = null,
   val selectedClipId: String? = null,
   val clips: List<VideoClip> = emptyList(),
   val audioTracks: List<AudioTrackItem> = emptyList(),
