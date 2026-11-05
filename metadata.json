@@ -1,0 +1,6 @@
+{
+  "name": "Edits",
+  "description": "Professional offline video editor with real gallery media picking, timeline trimming, filters, audio, speed control, transitions, and export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
