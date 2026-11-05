@@ -125,7 +125,8 @@ fun CapCutEditorScreen(
         onRedo = { viewModel.redo() },
         onOpenResolutionSheet = { viewModel.openResolutionSheet(true) },
         onExport = { viewModel.triggerExport() },
-        onRename = viewModel::renameProject
+        onRename = viewModel::renameProject,
+        compact = selectedText != null
       )
     },
     bottomBar = {

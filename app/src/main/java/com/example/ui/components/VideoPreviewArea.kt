@@ -229,8 +229,8 @@ fun VideoPreviewArea(
         }
       }
 
-      // Preview controls
-      Row(
+      // Keep text manipulation handles clear while a layer is selected.
+      if (uiState.selectedTextId == null) Row(
         modifier = Modifier
           .fillMaxWidth()
           .align(Alignment.BottomCenter)

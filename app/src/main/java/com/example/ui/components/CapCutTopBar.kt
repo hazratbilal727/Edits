@@ -22,7 +22,7 @@ import com.example.viewmodel.EditorUiState
 fun CapCutTopBar(
   uiState: EditorUiState, onBack: () -> Unit, onUndo: () -> Unit, onRedo: () -> Unit,
   onOpenResolutionSheet: () -> Unit, onExport: () -> Unit,
-  onRename: (String) -> Unit, modifier: Modifier = Modifier
+  onRename: (String) -> Unit, compact: Boolean = false, modifier: Modifier = Modifier
 ) {
   var renaming by remember { mutableStateOf(false) }
   Surface(color = CapCutSurface, modifier = modifier.fillMaxWidth()) {
@@ -48,7 +48,7 @@ fun CapCutTopBar(
           modifier = Modifier.padding(end = 8.dp).testTag("export_button")
         ) { Text("Export", fontSize = 12.sp) }
       }
-      TextButton(
+      if (!compact) TextButton(
         onClick = { renaming = true },
         modifier = Modifier.fillMaxWidth().testTag("project_title"),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp)

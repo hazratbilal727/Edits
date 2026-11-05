@@ -184,7 +184,7 @@ fun TimelineView(
               seek(it)
             }
           )
-          Row(verticalAlignment = Alignment.CenterVertically) {
+          if (uiState.selectedTextId == null) Row(verticalAlignment = Alignment.CenterVertically) {
             uiState.clips.forEachIndexed { index, clip ->
               Box(Modifier.width((clip.timelineDurationMs * zoom / 1000f).dp).height(60.dp)) {
                 ClipTile(clip, clip.id == uiState.selectedClipId) { onSelectClip(clip.id) }
