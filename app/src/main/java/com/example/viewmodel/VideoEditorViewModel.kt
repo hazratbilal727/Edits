@@ -175,20 +175,12 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
     pausePlayback()
     undoStack.clear()
     redoStack.clear()
-    val total = calculateTotalDuration(newClips)
-    _uiState.update {
-      it.copy(
-        currentProjectId = id,
-        projectTitle = projectTitle,
-        audioTracks = emptyList(),
-        textTracks = emptyList(),
-        canUndo = false,
-        canRedo = false,
-        clips = newClips,
-        totalDurationMs = total,
-        currentTimeMs = 0L,
+    _uiState.update { previous ->
+      EditorUiState(
+        currentProjectId = id, projectTitle = projectTitle, clips = newClips,
+        totalDurationMs = calculateTotalDuration(newClips),
         selectedClipId = newClips.firstOrNull()?.id,
-        isPlaying = false
+        resolutionSetting = previous.resolutionSetting
       )
     }
   }
@@ -269,6 +261,7 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
     _uiState.update {
       it.copy(
         selectedClipId = clipId,
+        selectedTextId = null,
         activeSubMenu = SubMenuType.CLIP_OPTIONS,
         clips = it.clips.map { c -> c.copy(isSelected = c.id == clipId) }
       )
@@ -798,6 +791,7 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
   }
 
   fun selectText(id: String?) {
+    if (id == null) { finishTextEditing(); return }
     pausePlayback()
     val state = _uiState.value
     val track = state.textTracks.firstOrNull { it.id == id }

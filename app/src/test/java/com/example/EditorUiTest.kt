@@ -101,6 +101,20 @@ class EditorUiTest {
       assertTrue(moved.posY < initial.posY)
       model.updateTextLayer(moved.copy(colorHex = "#00E5FF", rotation = 12f, backgroundHex = "#BB000000", entrance = "Fade"))
     }
+    val styled = compose.runOnIdle { model.uiState.value.textTracks.single() }
+    compose.onNodeWithTag("text_layer_canvas").performTouchInput {
+      val center = androidx.compose.ui.geometry.Offset(size.width * styled.posX, size.height * styled.posY)
+      down(0, center + androidx.compose.ui.geometry.Offset(-15f, 0f))
+      down(1, center + androidx.compose.ui.geometry.Offset(15f, 0f))
+      moveTo(0, center + androidx.compose.ui.geometry.Offset(-22f, -10f))
+      moveTo(1, center + androidx.compose.ui.geometry.Offset(22f, 10f))
+      up(0)
+      up(1)
+    }
+    compose.runOnIdle {
+      assertTrue(model.uiState.value.textTracks.single().scale > styled.scale)
+      assertTrue(kotlin.math.abs(model.uiState.value.textTracks.single().rotation - styled.rotation) > 1f)
+    }
     compose.onNodeWithTag("text_done").assertIsDisplayed()
     capture("editor-text-tools")
   }
