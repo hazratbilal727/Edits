@@ -840,12 +840,17 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
     val clip = state.currentClipAtPlayhead ?: return
     val source = clip.uriString ?: return
     pausePlayback()
+    if (!clip.isVideo) {
+      saveSnapshot()
+      _uiState.update { it.copy(coverUri = source) }
+      showToast("Project cover updated")
+      return
+    }
     val clipStart = state.clips.takeWhile { it.id != clip.id }.sumOf { it.timelineDurationMs }
     val frameTime = clip.speedSegments().sourceTimeAt(state.currentTimeMs - clipStart).coerceAtMost(clip.endMs - 1)
     viewModelScope.launch {
       try {
         val cover = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-          if (!clip.isVideo) return@withContext source
           val retriever = android.media.MediaMetadataRetriever()
           try {
             retriever.setDataSource(getApplication(), android.net.Uri.parse(source))
