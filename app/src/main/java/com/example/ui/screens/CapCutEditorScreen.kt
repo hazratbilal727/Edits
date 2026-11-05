@@ -65,6 +65,11 @@ fun CapCutEditorScreen(
   onOpenMediaPickerForAppend: () -> Unit
 ) {
   val uiState by viewModel.uiState.collectAsState()
+  val toolState = remember(
+    uiState.clips, uiState.selectedClipId, uiState.activeSubMenu,
+    uiState.selectedFilter, uiState.filterIntensity, uiState.adjustSettings,
+    uiState.resolutionSetting, uiState.projectTitle, uiState.canUndo, uiState.canRedo
+  ) { uiState }
   val context = LocalContext.current
   var showCaptionTools by remember { mutableStateOf(false) }
   var subtitleId by remember { mutableStateOf<String?>(null) }
@@ -104,7 +109,7 @@ fun CapCutEditorScreen(
     snackbarHost = { SnackbarHost(snackbarHostState) },
     topBar = {
       if (!uiState.isFullscreen) CapCutTopBar(
-        uiState = uiState,
+        uiState = toolState,
         onBack = leaveEditor,
         onUndo = { viewModel.undo() },
         onRedo = { viewModel.redo() },
@@ -115,7 +120,7 @@ fun CapCutEditorScreen(
     },
     bottomBar = {
       if (!uiState.isFullscreen) CapCutBottomBar(
-        uiState = uiState,
+        uiState = toolState,
         onMainToolClick = { tool ->
           viewModel.pausePlayback()
           when (tool) {

@@ -1,7 +1,7 @@
 package com.example
 
 import android.app.Application
-import android.graphics.Bitmap
+import com.github.takahirom.roborazzi.captureRoboImage
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.CompositionLocalProvider
@@ -56,9 +56,7 @@ class EditorUiTest {
   private fun capture(name: String) {
     val target = File("build/ui-previews/$name.png")
     target.parentFile.mkdirs()
-    target.outputStream().use {
-      compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it)
-    }
+    compose.onRoot().captureRoboImage(target.absolutePath)
   }
 
   @Test fun portraitEditorAndCrop() {
