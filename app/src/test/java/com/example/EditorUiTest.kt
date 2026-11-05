@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.*
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -125,6 +126,9 @@ class EditorUiTest {
     compose.onNodeWithTag("timeline_append_media_button").assertIsDisplayed()
     compose.onNodeWithTag("timeline_add_audio", useUnmergedTree = true).assertIsDisplayed()
     compose.onNodeWithTag("timeline_add_text", useUnmergedTree = true).assertIsDisplayed()
+    compose.onNodeWithTag("timeline_cover", useUnmergedTree = true).performClick()
+    compose.onNodeWithText("Use this frame").performClick()
+    compose.waitUntil(5000) { model.uiState.value.coverUri != null }
     compose.onNodeWithTag("timeline_clip_mute", useUnmergedTree = true).performClick()
     compose.runOnIdle { assertTrue(model.uiState.value.clips.single().isMuted) }
     capture("timeline-reference")
@@ -135,6 +139,26 @@ class EditorUiTest {
     compose.runOnIdle { assertTrue(model.uiState.value.currentTimeMs > 0L) }
     compose.onNodeWithTag("timeline_add_text", useUnmergedTree = true).performClick()
     compose.runOnIdle { assertEquals(1, model.uiState.value.textTracks.size) }
+  }
+
+  @Test fun timelinePinchZoomKeepsThePlayheadTime() {
+    val model = editor(360, 800)
+    val surface = compose.onNodeWithTag("timeline_scrub_surface", useUnmergedTree = true)
+    val before = surface.fetchSemanticsNode().config[SemanticsProperties.StateDescription]
+      .filter(Char::isDigit).toInt()
+    surface.performTouchInput {
+      val y = height - 3f
+      down(0, androidx.compose.ui.geometry.Offset(width * 0.4f, y))
+      down(1, androidx.compose.ui.geometry.Offset(width * 0.6f, y))
+      moveTo(0, androidx.compose.ui.geometry.Offset(width * 0.25f, y))
+      moveTo(1, androidx.compose.ui.geometry.Offset(width * 0.75f, y))
+      up(0)
+      up(1)
+    }
+    val after = surface.fetchSemanticsNode().config[SemanticsProperties.StateDescription]
+      .filter(Char::isDigit).toInt()
+    assertTrue(after > before)
+    compose.runOnIdle { assertEquals(0L, model.uiState.value.currentTimeMs) }
   }
 
   @Test fun timelineHandleTrimsRealClipDuration() {
