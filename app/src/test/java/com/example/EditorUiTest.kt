@@ -56,7 +56,7 @@ class EditorUiTest {
   private fun capture(name: String) {
     val target = File("build/ui-previews/$name.png")
     target.parentFile.mkdirs()
-    compose.onRoot().captureRoboImage(target.absolutePath)
+    compose.onNodeWithTag(if (name == "home") "home_screen" else "editor_screen").captureRoboImage(target.absolutePath)
   }
 
   @Test fun portraitEditorAndCrop() {

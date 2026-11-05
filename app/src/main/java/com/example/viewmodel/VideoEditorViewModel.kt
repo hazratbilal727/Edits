@@ -20,6 +20,7 @@ import com.example.media.reframeFaces
 import java.io.File
 import android.media.AudioManager
 import android.media.ToneGenerator
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.model.AdjustSettings
@@ -51,7 +52,7 @@ import java.util.UUID
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 @androidx.annotation.OptIn(UnstableApi::class)
-class VideoEditorViewModel(application: Application) : AndroidViewModel(application) {
+class VideoEditorViewModel(application: Application, private val savedStateHandle: SavedStateHandle = SavedStateHandle()) : AndroidViewModel(application) {
 
   private val _uiState = MutableStateFlow(EditorUiState())
   val uiState: StateFlow<EditorUiState> = _uiState.asStateFlow()
@@ -76,6 +77,7 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
   private val projectDao = AppDatabase.getDatabase(application).projectDao()
 
   init {
+    savedStateHandle.get<String>("projectId")?.let { openProject(it) {} }
     viewModelScope.launch {
       _uiState.map(ProjectContent::from).distinctUntilChanged().debounce(600).collect { content ->
         if (content != null) persistProject(content)
@@ -118,6 +120,7 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
         pausePlayback()
         undoStack.clear()
         redoStack.clear()
+        savedStateHandle["projectId"] = content.id
         _uiState.value = content.editorState()
         onLoaded()
       } catch (error: kotlinx.coroutines.CancellationException) {
@@ -167,13 +170,15 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
   }
 
   fun loadClips(newClips: List<VideoClip>, projectTitle: String = "My Edit") {
+    val id = UUID.randomUUID().toString()
+    savedStateHandle["projectId"] = id
     pausePlayback()
     undoStack.clear()
     redoStack.clear()
     val total = calculateTotalDuration(newClips)
     _uiState.update {
       it.copy(
-        currentProjectId = UUID.randomUUID().toString(),
+        currentProjectId = id,
         projectTitle = projectTitle,
         audioTracks = emptyList(),
         textTracks = emptyList(),

@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import com.example.model.AspectRatioOption
 import com.example.model.MainTool
 import com.example.model.SubMenuType
@@ -105,7 +106,7 @@ fun CapCutEditorScreen(
     }
   }
 
-  Scaffold(
+  Scaffold(modifier = Modifier.testTag("editor_screen"),
     snackbarHost = { SnackbarHost(snackbarHostState) },
     topBar = {
       if (!uiState.isFullscreen) CapCutTopBar(

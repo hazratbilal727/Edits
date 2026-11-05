@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -31,6 +32,7 @@ import kotlinx.coroutines.launch
 fun CapCutHomeScreen(onNewVideoClick: () -> Unit, onEditPhotoClick: () -> Unit, onOpenProject: (String) -> Unit) {
   var tab by rememberSaveable { mutableIntStateOf(0) }
   Scaffold(
+    modifier = Modifier.testTag("home_screen"),
     containerColor = CapCutBackground,
     bottomBar = {
       NavigationBar(containerColor = CapCutSurface) {
