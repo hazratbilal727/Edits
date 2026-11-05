@@ -696,7 +696,7 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
     showToast("Added audio track: $title")
   }
 
-  fun importLocalAudio(uri: android.net.Uri) {
+  fun importLocalAudio(uri: android.net.Uri, titleOverride: String? = null) {
     val app = getApplication<Application>()
     val state = _uiState.value
     val start = state.currentTimeMs
@@ -717,7 +717,7 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
           runCatching {
             app.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
           }
-          val name = app.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)
+          val name = titleOverride ?: if (uri.scheme == "file") "Voiceover" else app.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)
             ?.use { if (it.moveToFirst()) it.getString(0) else null } ?: "Imported audio"
           AudioTrackItem(
             UUID.randomUUID().toString(), name, start, minOf(start + duration, state.totalDurationMs),
@@ -772,17 +772,18 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
   }
 
   fun addSoundEffect(title: String, durationMs: Long) {
-    saveSnapshot()
-    val track = AudioTrackItem(
-      id = UUID.randomUUID().toString(),
-      title = title,
-      startMs = _uiState.value.currentTimeMs,
-      endMs = _uiState.value.currentTimeMs + durationMs,
-      category = "SFX"
-    )
-    _uiState.update { it.copy(audioTracks = it.audioTracks + track, showSfxDialog = false) }
-    toneGenerator?.startTone(ToneGenerator.TONE_PROP_PROMPT, 100)
-    showToast("Added SFX: $title")
+    pausePlayback()
+    _uiState.update { it.copy(showSfxDialog = false) }
+    viewModelScope.launch {
+      try {
+        val file = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+          com.example.media.createSoundEffect(getApplication<Application>().filesDir, title, durationMs)
+        }
+        importLocalAudio(android.net.Uri.fromFile(file), title)
+      } catch (error: kotlinx.coroutines.CancellationException) {
+        throw error
+      } catch (_: Exception) { showToast("Could not create this sound.") }
+    }
   }
 
   fun addTextTrack(text: String, colorHex: String = "#FFFFFF", fontSizeSp: Float = 26f) {
@@ -895,21 +896,28 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
   }
 
   fun applyTransition(type: TransitionType, durationMs: Long) {
+    val state = _uiState.value
+    val index = state.clips.indexOfFirst { it.id == state.selectedTransitionClipId }
+    if (index < 0 || index >= state.clips.lastIndex) return
     saveSnapshot()
-    val targetId = _uiState.value.selectedTransitionClipId ?: return
-    val updated = _uiState.value.clips.map {
-      if (it.id == targetId) it.copy(transitionAfter = type, transitionDurationMs = durationMs) else it
-    }
-    _uiState.update {
-      it.copy(
-        clips = updated,
-        showTransitionDialog = false
+    pausePlayback()
+    _uiState.update { current ->
+      current.copy(
+        showTransitionDialog = false,
+        clips = current.clips.mapIndexed { position, clip ->
+          val duration = if (type == TransitionType.NONE) 0L else minOf(durationMs, clip.timelineDurationMs / 2)
+          when (position) {
+            index -> clip.copy(transitionAfter = TransitionType.NONE, fadeOutMs = duration)
+            index + 1 -> clip.copy(fadeInMs = duration)
+            else -> clip
+          }
+        }
       )
     }
-    showToast("Transition: ${type.displayName}")
   }
 
   fun openVoiceChanger() {
+    pausePlayback()
     _uiState.update { it.copy(showVoiceChangerDialog = true) }
   }
 

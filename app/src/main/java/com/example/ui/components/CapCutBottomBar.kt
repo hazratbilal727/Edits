@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -131,7 +132,7 @@ fun CapCutBottomBar(
           ToolIconItem("Captions", Icons.Default.Subtitles, onOpenCaptions)
           ToolIconItem(MainTool.FILTERS.title, Icons.Default.AutoAwesome) { onMainToolClick(MainTool.FILTERS) }
           ToolIconItem(MainTool.ADJUST.title, Icons.Default.Tune) { onMainToolClick(MainTool.ADJUST) }
-          ToolIconItem(MainTool.RATIO.title, Icons.Default.AspectRatio) { onMainToolClick(MainTool.RATIO) }
+          ToolIconItem("Format", Icons.Default.AspectRatio) { onMainToolClick(MainTool.RATIO) }
           ToolIconItem(MainTool.EFFECTS.title, Icons.Default.AutoFixHigh) { onMainToolClick(MainTool.EFFECTS) }
         }
       }
@@ -293,7 +294,7 @@ fun CapCutBottomBar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
               listOf("Brightness", "Contrast", "Saturation", "Warmth").forEach { tab ->
                 Text(
                   text = tab,
@@ -376,7 +377,8 @@ private fun ToolIconItem(
     horizontalAlignment = Alignment.CenterHorizontally,
     modifier = Modifier
       .clickable { onClick() }
-      .padding(vertical = 4.dp, horizontal = 4.dp)
+      .sizeIn(minWidth = 56.dp, minHeight = 64.dp)
+      .padding(vertical = 6.dp, horizontal = 4.dp)
   ) {
     Box(
       modifier = Modifier

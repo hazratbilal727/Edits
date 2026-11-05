@@ -37,6 +37,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.example.model.AspectRatioOption
+import com.example.model.MainTool
 import com.example.model.SubMenuType
 import com.example.model.speedSegments
 import com.example.model.sourceTimeAt
@@ -51,7 +53,7 @@ import com.example.ui.components.SfxDialog
 import com.example.ui.components.TimelineView
 import com.example.ui.components.TransitionsDialog
 import com.example.ui.components.VideoPreviewArea
-import com.example.ui.components.VoiceChangerDialog
+import com.example.ui.components.VoiceoverDialog
 import com.example.ui.theme.CapCutBackground
 import com.example.viewmodel.VideoEditorViewModel
 
@@ -113,7 +115,14 @@ fun CapCutEditorScreen(
     bottomBar = {
       if (!uiState.isFullscreen) CapCutBottomBar(
         uiState = uiState,
-        onMainToolClick = { viewModel.onMainToolClicked(it) },
+        onMainToolClick = { tool ->
+          viewModel.pausePlayback()
+          when (tool) {
+            MainTool.RATIO -> clipDialog = "Format"
+            MainTool.EFFECTS -> clipDialog = "Effects"
+            else -> viewModel.onMainToolClicked(tool)
+          }
+        },
         onCloseSubMenu = { viewModel.closeSubMenu() },
         onSplitClip = { viewModel.splitCurrentClip() },
         onTrimClip = { clipDialog = "Trim" },
@@ -123,7 +132,7 @@ fun CapCutEditorScreen(
         onDeleteClip = { viewModel.deleteSelectedClip() },
         onDuplicateClip = { viewModel.duplicateSelectedClip() },
         onRotateClip = { viewModel.rotateSelectedClip() },
-        onReverseClip = { viewModel.reverseSelectedClip() },
+        onReverseClip = { clipDialog = "Reverse" },
         onFreezeClip = { viewModel.freezeFrame() },
         onOpenSpeedMenu = { viewModel.openSpeedMenu() },
         onOpenSpeedCurve = {
@@ -289,7 +298,41 @@ fun CapCutEditorScreen(
 
     val tool = clipDialog
     val clip = uiState.selectedClip
-    if (clip != null && (tool == "Speed Curve" || tool == "Keyframes")) {
+    if (tool == "Format") {
+      AlertDialog(
+        onDismissRequest = { clipDialog = null }, title = { Text("Canvas format") },
+        text = {
+          Column {
+            AspectRatioOption.entries.forEach { ratio ->
+              TextButton(onClick = { viewModel.setAspectRatio(ratio); clipDialog = null }) {
+                Text((if (ratio == uiState.aspectRatio) "✓  " else "") + ratio.label)
+              }
+            }
+          }
+        },
+        confirmButton = { TextButton(onClick = { clipDialog = null }) { Text("Done") } }
+      )
+    } else if (tool == "Effects") {
+      AlertDialog(
+        onDismissRequest = { clipDialog = null }, title = { Text("Clip effects") },
+        text = {
+          Column {
+            Text("Choose a clip in the timeline, then apply an effect.")
+            listOf("Chroma Key", "Noise Reduction", "Auto Reframe", "Video Fade", "Keyframes").forEach { effect ->
+              TextButton(enabled = clip != null && (clip.isVideo || effect in listOf("Keyframes", "Video Fade")),
+                onClick = { clipDialog = effect }) { Text(effect) }
+            }
+          }
+        },
+        confirmButton = { TextButton(onClick = { clipDialog = null }) { Text("Done") } }
+      )
+    } else if (tool == "Reverse") {
+      AlertDialog(
+        onDismissRequest = { clipDialog = null }, title = { Text("Reverse") },
+        text = { Text("Reverse rendering is not available in this version.") },
+        confirmButton = { TextButton(onClick = { clipDialog = null }) { Text("Done") } }
+      )
+    } else if (clip != null && (tool == "Speed Curve" || tool == "Keyframes")) {
       val timelineStart = uiState.clips.takeWhile { it.id != clip.id }.sumOf { it.timelineDurationMs }
       ClipAnimationDialog(
         clip = clip,
@@ -415,9 +458,10 @@ fun CapCutEditorScreen(
     }
 
     if (uiState.showVoiceChangerDialog) {
-      VoiceChangerDialog(
+      VoiceoverDialog(
+        maxDurationMs = uiState.totalDurationMs - uiState.currentTimeMs,
         onDismiss = { viewModel.closeVoiceChanger() },
-        onSelectEffect = { viewModel.applyVoiceEffect(it) }
+        onUse = { viewModel.importLocalAudio(it) }
       )
     }
 

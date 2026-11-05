@@ -191,7 +191,7 @@ fun TimelineView(
                   Box(
                     Modifier.align(Alignment.CenterEnd).size(22.dp)
                       .clip(RoundedCornerShape(6.dp))
-                      .background(if (clip.transitionAfter == TransitionType.NONE) CapCutTimelineBg else CapCutTeal)
+                      .background(if (clip.fadeOutMs == 0L) CapCutTimelineBg else CapCutTeal)
                       .clickable { onOpenTransition(clip.id) }
                       .testTag("transition_button_${clip.id}"),
                     contentAlignment = Alignment.Center

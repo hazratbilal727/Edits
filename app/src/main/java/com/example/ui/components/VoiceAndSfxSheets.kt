@@ -48,14 +48,10 @@ import com.example.ui.theme.CapCutTextSecondary
 data class SfxItem(val title: String, val durationMs: Long, val tag: String)
 
 val OFFLINE_SFX_LIST = listOf(
-  SfxItem("Camera Shutter", 800L, "Pop"),
-  SfxItem("Pop Bubble", 500L, "UI"),
-  SfxItem("Whoosh Fast", 1200L, "Motion"),
-  SfxItem("Ding Bell", 1500L, "Chime"),
-  SfxItem("Applause Crowd", 3500L, "Ambience"),
-  SfxItem("Keyboard Typing", 2500L, "Office"),
-  SfxItem("Laser Beam", 900L, "Game"),
-  SfxItem("Success Fanfare", 3000L, "Music")
+  SfxItem("Soft chime", 1500L, "Chime"),
+  SfxItem("Pop", 400L, "Accent"),
+  SfxItem("Whoosh", 1000L, "Motion"),
+  SfxItem("Digital rise", 1800L, "Accent")
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
