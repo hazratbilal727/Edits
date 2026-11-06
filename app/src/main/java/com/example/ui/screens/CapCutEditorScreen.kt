@@ -10,6 +10,7 @@ import com.example.ui.components.LocalAudioDialog
 import com.example.ui.components.SubtitleEditorDialog
 import com.example.ui.components.LocalAudioPlayback
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
