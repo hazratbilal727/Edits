@@ -38,10 +38,11 @@ fun TextToolsPanel(
   val inputFocus = remember { FocusRequester() }
   val focusManager = LocalFocusManager.current
   val keyboard = LocalSoftwareKeyboardController.current
-  var tab by remember(track.id) { mutableStateOf("Style") }
+  val isPhoto = track.photoOverlayPath != null
+  var tab by remember(track.id) { mutableStateOf(if (isPhoto) "Edit" else "Style") }
   LaunchedEffect(editRequest) { if (editRequest > 0) tab = "Edit" }
   LaunchedEffect(tab, editRequest) {
-    if (tab == "Edit" && editRequest > 0) {
+    if (!isPhoto && tab == "Edit" && editRequest > 0) {
       androidx.compose.runtime.withFrameNanos {}
       inputFocus.requestFocus()
       keyboard?.show()
@@ -52,7 +53,7 @@ fun TextToolsPanel(
     Column(Modifier.navigationBarsPadding().imePadding()) {
       Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
         Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp)) {
-          listOf("Edit", "Style", "Animate", "Timing").forEach { name ->
+          (if (isPhoto) listOf("Edit", "Animate", "Timing") else listOf("Edit", "Style", "Animate", "Timing")).forEach { name ->
             TextButton(onClick = { tab = name; if (name != "Edit") { focusManager.clearFocus(); keyboard?.hide() } }) { Text(name, color = if (tab == name) CapCutTeal else CapCutTextSecondary) }
           }
         }
@@ -64,10 +65,11 @@ fun TextToolsPanel(
       ) {
         when (tab) {
           "Edit" -> {
-            OutlinedTextField(
+            if (!isPhoto) OutlinedTextField(
               track.text, { onChange(track.copy(text = it.take(2000))) },
               modifier = Modifier.fillMaxWidth().focusRequester(inputFocus).testTag("text_content"), label = { Text("Text") }, minLines = 2, maxLines = 4
             )
+            if (isPhoto) TextSlider("Opacity", track.opacity, 0f..1f) { onChange(track.copy(opacity = it)) }
             Text("Drag to move · Pinch to resize · Twist or drag the corner to rotate",
               style = MaterialTheme.typography.bodySmall, color = CapCutTextSecondary)
             Row {
@@ -129,7 +131,7 @@ fun TextToolsPanel(
             }
           }
           "Animate" -> {
-            ChoiceRow("In", listOf("None", "Fade", "Slide up", "Pop", "Typewriter"), track.entrance) { onChange(track.copy(entrance = it)) }
+            ChoiceRow("In", listOf("None", "Fade", "Slide up", "Pop") + if (isPhoto) emptyList() else listOf("Typewriter"), track.entrance) { onChange(track.copy(entrance = it)) }
             ChoiceRow("Out", listOf("None", "Fade", "Slide down", "Shrink"), track.exit) { onChange(track.copy(exit = it)) }
             ChoiceRow("Loop", listOf("None", "Pulse", "Float"), track.loop) { onChange(track.copy(loop = it)) }
             TextSlider("Animation duration (ms)", track.animationDurationMs.toFloat(), 100f..1500f) {

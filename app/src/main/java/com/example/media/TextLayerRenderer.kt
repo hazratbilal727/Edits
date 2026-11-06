@@ -53,7 +53,26 @@ class TextLayerRenderer {
   private val cache = LruCache<Key, StaticLayout>(48)
   private val background = Paint(Paint.ANTI_ALIAS_FLAG)
 
+  private val photos = object : LruCache<String, android.graphics.Bitmap>(16 * 1024 * 1024) {
+    override fun sizeOf(key: String, value: android.graphics.Bitmap): Int = value.byteCount
+  }
+  private val photoPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+
+  private fun photo(path: String): android.graphics.Bitmap? =
+    photos.get(path) ?: android.graphics.BitmapFactory.decodeFile(path)?.also { photos.put(path, it) }
+
+  private fun photoBounds(bitmap: android.graphics.Bitmap, width: Int): android.graphics.RectF {
+    val scale = width * 0.42f / maxOf(bitmap.width, bitmap.height)
+    val x = bitmap.width * scale / 2
+    val y = bitmap.height * scale / 2
+    return android.graphics.RectF(-x, -y, x, y)
+  }
+
   fun geometry(track: TextTrackItem, width: Int): TextGeometry {
+    track.photoOverlayPath?.let { path ->
+      val bounds = photo(path)?.let { photoBounds(it, width) }
+      return TextGeometry(bounds?.width() ?: 0f, bounds?.height() ?: 0f, 0f)
+    }
     val layout = layout(track, width, track.text.length)
     val padding = width / 360f * 6f
     return TextGeometry(layout.width + padding * 2, layout.height + padding * 2, padding)
@@ -95,6 +114,17 @@ class TextLayerRenderer {
 
   fun draw(canvas: Canvas, track: TextTrackItem, timeMs: Long, editing: Boolean = false, frameWidth: Int = canvas.width, frameHeight: Int = canvas.height) {
     val motion = textMotion(track, timeMs, editing)
+    track.photoOverlayPath?.let { path ->
+      val bitmap = photo(path) ?: return
+      canvas.save()
+      canvas.translate(track.posX * frameWidth, (track.posY + motion.offsetY) * frameHeight)
+      canvas.rotate(track.rotation)
+      canvas.scale(track.scale * motion.scale, track.scale * motion.scale)
+      photoPaint.alpha = (motion.alpha * 255).toInt().coerceIn(0, 255)
+      canvas.drawBitmap(bitmap, null, photoBounds(bitmap, frameWidth), photoPaint)
+      canvas.restore()
+      return
+    }
     val layout = layout(track, frameWidth, motion.visibleCharacters)
     val padding = frameWidth / 360f * 6f
     val width = layout.width + padding * 2

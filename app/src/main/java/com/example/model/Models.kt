@@ -120,7 +120,9 @@ data class TextTrackItem(
   val entrance: String = "None",
   val exit: String = "None",
   val loop: String = "None",
-  val animationDurationMs: Long = 400L
+  val animationDurationMs: Long = 400L,
+  val isSticker: Boolean = false,
+  val photoOverlayPath: String? = null
 ) {
   val durationMs: Long
     get() = (endMs - startMs).coerceAtLeast(100L)

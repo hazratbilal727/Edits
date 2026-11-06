@@ -88,6 +88,10 @@ fun CapCutEditorScreen(
   var textEditRequest by remember { mutableStateOf(0) }
   val selectedText = uiState.textTracks.firstOrNull { it.id == uiState.selectedTextId }
   var audioId by remember { mutableStateOf<String?>(null) }
+  var showStickers by remember { mutableStateOf(false) }
+  val importOverlay = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    if (uri != null) viewModel.importPhotoOverlay(uri)
+  }
   val importAudio = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
     if (uri != null) viewModel.importLocalAudio(uri)
   }
@@ -256,6 +260,15 @@ fun CapCutEditorScreen(
           viewModel.addTextTrack("Your text")
           textEditRequest++
         },
+        onAddSticker = { viewModel.pausePlayback(); textEditRequest = 0; showStickers = true },
+        onAddOverlay = { viewModel.pausePlayback(); textEditRequest = 0; importOverlay.launch(arrayOf("image/*")) },
+        onOpenEffects = { id ->
+          viewModel.pausePlayback()
+          val target = id ?: uiState.currentClipAtPlayhead?.id
+          if (target != null) viewModel.selectClip(target)
+          clipDialog = "Effects"
+        },
+        onOpenFilters = { viewModel.onMainToolClicked(MainTool.FILTERS) },
         onToggleClipMute = viewModel::toggleTimelineClipMute,
         onEditCover = { viewModel.pausePlayback(); clipDialog = "Cover" },
         onBeginEdit = viewModel::beginTimelineEdit,
@@ -492,6 +505,26 @@ fun CapCutEditorScreen(
           }) { Text("Apply") }
         },
         dismissButton = { TextButton(onClick = { clipDialog = null }) { Text("Cancel") } }
+      )
+    }
+
+    if (showStickers) {
+      AlertDialog(
+        onDismissRequest = { showStickers = false },
+        title = { Text("Add emoji sticker") },
+        text = {
+          Column {
+            listOf(listOf("😀", "😍", "😂", "😎"), listOf("❤️", "🔥", "⭐", "✨"),
+              listOf("🎉", "👍", "💯", "🎬")).forEach { row ->
+              Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                row.forEach { emoji ->
+                  TextButton(onClick = { viewModel.addSticker(emoji); showStickers = false }) { Text(emoji) }
+                }
+              }
+            }
+          }
+        },
+        confirmButton = { TextButton(onClick = { showStickers = false }) { Text("Cancel") } }
       )
     }
 

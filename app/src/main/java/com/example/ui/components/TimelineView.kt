@@ -62,6 +62,10 @@ fun TimelineView(
   onTogglePlayPause: () -> Unit,
   onAddAudio: () -> Unit,
   onAddText: () -> Unit,
+  onAddSticker: () -> Unit,
+  onAddOverlay: () -> Unit,
+  onOpenEffects: (String?) -> Unit,
+  onOpenFilters: () -> Unit,
   onToggleClipMute: (String) -> Unit,
   onEditCover: () -> Unit,
   onBeginEdit: () -> Unit,
@@ -113,7 +117,15 @@ fun TimelineView(
     uiState.clips.map { clip -> ClipSpan(clip, time).also { time += clip.timelineDurationMs } }
   }
   val audioLanes = remember(uiState.audioTracks) { packLanes(uiState.audioTracks, { it.startMs }, { it.endMs }) }
-  val textLanes = remember(uiState.textTracks) { packLanes(uiState.textTracks, { it.startMs }, { it.endMs }) }
+  val visualLanes = remember(uiState.textTracks) {
+    uiState.textTracks.groupBy { track ->
+      when {
+        track.photoOverlayPath != null -> "overlay"
+        track.isSticker -> "sticker"
+        else -> "text"
+      }
+    }.mapValues { (_, tracks) -> packLanes(tracks, { it.startMs }, { it.endMs }) }
+  }
   val bodyLimit = (LocalConfiguration.current.screenHeightDp * 0.32f).coerceIn(130f, 245f).dp
 
   Column(modifier.fillMaxWidth().background(CapCutTimelineBg).testTag("mobile_timeline")) {
@@ -239,27 +251,85 @@ fun TimelineView(
           AddTrackLane("Add audio", Icons.Default.MusicNote, origin, onAddAudio, "timeline_add_audio")
         }
 
-        textLanes.forEach { lane ->
-          Box(Modifier.fillMaxWidth().height(40.dp)) {
-            lane.forEach { track ->
-              TimelineTrack(track.id, track.text, track.startMs, track.endMs, origin, viewportWidth, pxPerMs,
-                CapCutTextTrack, Icons.Default.TextFields,
-                onEdit = { onEditText(track.id) }, onRemove = { onRemoveText(track.id) },
-                onBegin = onBeginEdit,
-                onMove = { start -> onTextTiming(track.id, start, start + track.endMs - track.startMs) },
-                onTrim = { leftEdge, delta ->
-                  if (leftEdge) onTextTiming(track.id, (track.startMs + delta).coerceIn(0, track.endMs - 100), track.endMs)
-                  else onTextTiming(track.id, track.startMs, (track.endMs + delta).coerceIn(track.startMs + 100, uiState.totalDurationMs))
-                }, projectDuration = uiState.totalDurationMs,
-                selected = track.id == uiState.selectedTextId)
+        listOf(
+          VisualLane("text", "Add text", Icons.Default.TextFields, CapCutTextTrack, onAddText),
+          VisualLane("overlay", "Add photo overlay", Icons.Default.Image, CapCutPurple.copy(alpha = 0.4f), onAddOverlay),
+          VisualLane("sticker", "Add sticker", Icons.Default.EmojiEmotions, CapCutTeal.copy(alpha = 0.35f), onAddSticker)
+        ).forEach { type ->
+          visualLanes[type.id].orEmpty().forEach { lane ->
+            Box(Modifier.fillMaxWidth().height(40.dp)) {
+              lane.forEach { track ->
+                TimelineTrack(track.id, track.text, track.startMs, track.endMs, origin, viewportWidth, pxPerMs,
+                  type.color, type.icon,
+                  onEdit = { onEditText(track.id) }, onRemove = { onRemoveText(track.id) },
+                  onBegin = onBeginEdit,
+                  onMove = { start -> onTextTiming(track.id, start, start + track.endMs - track.startMs) },
+                  onTrim = { leftEdge, delta ->
+                    if (leftEdge) onTextTiming(track.id, (track.startMs + delta).coerceIn(0, track.endMs - 100), track.endMs)
+                    else onTextTiming(track.id, track.startMs, (track.endMs + delta).coerceIn(track.startMs + 100, uiState.totalDurationMs))
+                  }, projectDuration = uiState.totalDurationMs,
+                  selected = track.id == uiState.selectedTextId)
+              }
             }
           }
+          AddTrackLane(type.label, type.icon, origin, type.add, "timeline_add_${type.id}")
         }
-        AddTrackLane("Add text", Icons.Default.TextFields, origin, onAddText, "timeline_add_text")
+
+        if (uiState.selectedTextId == null) {
+          val effectSpans = spans.mapNotNull { (clip, start) ->
+            val names = buildList {
+              if (clip.chromaKey != null) add("Chroma key")
+              if (clip.videoDenoise > 0f) add("Denoise")
+              if (clip.fadeInMs > 0 || clip.fadeOutMs > 0) add("Fade")
+              if (clip.transformKeyframes.isNotEmpty()) add("Keyframes")
+            }
+            if (names.isEmpty()) null else LaneSpan(clip.id, names.joinToString(" · "), start, start + clip.timelineDurationMs)
+          }
+          AppliedLane(effectSpans, origin, viewportWidth, pxPerMs, CapCutPurple.copy(alpha = 0.45f)) { onOpenEffects(it) }
+          AddTrackLane("Clip effects", Icons.Default.AutoAwesome, origin, { onOpenEffects(null) }, "timeline_clip_effects")
+          if (uiState.selectedFilter.id != "original") {
+            AppliedLane(listOf(LaneSpan("project", uiState.selectedFilter.name, 0L, uiState.totalDurationMs)),
+              origin, viewportWidth, pxPerMs, CapCutTeal.copy(alpha = 0.4f)) { onOpenFilters() }
+          }
+          AddTrackLane("Project filter", Icons.Default.Palette, origin, onOpenFilters, "timeline_project_filter")
+        }
       }
       Canvas(Modifier.matchParentSize().testTag("timeline_playhead_cursor")) {
         drawLine(CapCutTextPrimary, Offset(size.width / 2, 23.dp.toPx()), Offset(size.width / 2, size.height),
           2.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+      }
+    }
+  }
+}
+
+private data class VisualLane(
+  val id: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector,
+  val color: Color, val add: () -> Unit
+)
+
+private data class LaneSpan(val id: String, val label: String, val start: Long, val end: Long)
+
+@Composable
+private fun AppliedLane(
+  spans: List<LaneSpan>, origin: Float, viewport: Float, scale: Double, color: Color,
+  onClick: (String) -> Unit
+) {
+  if (spans.isEmpty()) return
+  val density = LocalDensity.current
+  Box(Modifier.fillMaxWidth().height(40.dp)) {
+    spans.forEach { span ->
+      val left = (origin + span.start * scale).coerceAtLeast(0.0)
+      val right = (origin + span.end * scale).coerceAtMost(viewport.toDouble())
+      if (right > left) {
+        Box(
+          Modifier.offset { IntOffset(left.roundToInt(), 0) }
+            .width(with(density) { (right - left).toFloat().toDp() }).fillMaxHeight()
+            .clip(RoundedCornerShape(5.dp)).background(color).clickable { onClick(span.id) }
+            .padding(horizontal = 10.dp),
+          contentAlignment = Alignment.CenterStart
+        ) {
+          Text(span.label, color = CapCutTextPrimary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
       }
     }
   }

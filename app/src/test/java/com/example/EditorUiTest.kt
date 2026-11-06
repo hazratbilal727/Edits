@@ -141,6 +141,29 @@ class EditorUiTest {
     compose.runOnIdle { assertEquals(1, model.uiState.value.textTracks.size) }
   }
 
+  @Test fun timelineStacksTextAndAddsStickerInItsOwnLane() {
+    val model = editor(360, 800)
+    compose.runOnIdle {
+      model.addTextTrack("First")
+      model.addTextTrack("Second")
+      model.finishTextEditing()
+    }
+    val text = model.uiState.value.textTracks
+    val first = compose.onNodeWithTag("timeline_track_${text[0].id}", useUnmergedTree = true)
+    val second = compose.onNodeWithTag("timeline_track_${text[1].id}", useUnmergedTree = true)
+    first.performScrollTo()
+    second.performScrollTo()
+    assertTrue(second.fetchSemanticsNode().positionInRoot.y > first.fetchSemanticsNode().positionInRoot.y)
+    compose.onNodeWithTag("timeline_add_sticker", useUnmergedTree = true).performScrollTo().performClick()
+    compose.onNodeWithText("🔥").performClick()
+    compose.runOnIdle {
+      assertEquals("🔥", model.uiState.value.textTracks.single { it.isSticker }.text)
+      model.finishTextEditing()
+    }
+    compose.onNodeWithTag("timeline_project_filter", useUnmergedTree = true).performScrollTo().assertIsDisplayed()
+    capture("timeline-layer-tools")
+  }
+
   @Test fun timelinePinchZoomKeepsThePlayheadTime() {
     val model = editor(360, 800)
     val surface = compose.onNodeWithTag("timeline_scrub_surface", useUnmergedTree = true)

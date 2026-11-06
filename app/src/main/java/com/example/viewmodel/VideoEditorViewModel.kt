@@ -935,7 +935,57 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
     }
   }
 
-  fun addTextTrack(text: String, colorHex: String = "#FFFFFF", fontSizeSp: Float = 26f) {
+  fun addSticker(emoji: String) = addTextTrack(emoji, fontSizeSp = 48f, isSticker = true)
+
+  fun importPhotoOverlay(uri: android.net.Uri) {
+    val projectId = _uiState.value.currentProjectId ?: return
+    if (_uiState.value.totalDurationMs < 100L) return
+    val app = getApplication<Application>()
+    viewModelScope.launch {
+      val photo = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        runCatching {
+          val resolver = app.contentResolver
+          val bitmap = if (android.os.Build.VERSION.SDK_INT >= 28) {
+            val source = android.graphics.ImageDecoder.createSource(resolver, uri)
+            android.graphics.ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+              val longest = maxOf(info.size.width, info.size.height)
+              decoder.setTargetSampleSize(((longest.toLong() + 1023) / 1024).toInt().coerceAtLeast(1))
+              decoder.allocator = android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE
+            }
+          } else {
+            val options = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            resolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it, null, options) }
+            options.inJustDecodeBounds = false
+            options.inSampleSize = 1
+            while (maxOf(options.outWidth, options.outHeight) / options.inSampleSize > 1024) options.inSampleSize *= 2
+            checkNotNull(resolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it, null, options) })
+          }
+          val directory = java.io.File(app.filesDir, "photo-overlays").apply { mkdirs() }
+          val file = java.io.File(directory, UUID.randomUUID().toString() + ".png")
+          try {
+            file.outputStream().use { check(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
+            file
+          } catch (failure: Exception) {
+            file.delete()
+            throw failure
+          } finally {
+            bitmap.recycle()
+          }
+        }.getOrNull()
+      }
+      if (photo == null) return@launch showToast("Could not import the photo overlay")
+      if (_uiState.value.currentProjectId != projectId || _uiState.value.totalDurationMs < 100L) {
+        photo.delete()
+        return@launch
+      }
+      addTextTrack("Photo overlay", photoOverlayPath = photo.absolutePath)
+    }
+  }
+
+  fun addTextTrack(
+    text: String, colorHex: String = "#FFFFFF", fontSizeSp: Float = 26f,
+    isSticker: Boolean = false, photoOverlayPath: String? = null
+  ) {
     if (text.isBlank() || _uiState.value.totalDurationMs < 100) return
     val start = _uiState.value.currentTimeMs.coerceAtMost(_uiState.value.totalDurationMs - 100)
     saveSnapshot()
@@ -945,7 +995,9 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
       startMs = start,
       endMs = (start + 3500L).coerceAtMost(_uiState.value.totalDurationMs),
       colorHex = colorHex,
-      fontSizeSp = fontSizeSp
+      fontSizeSp = fontSizeSp,
+      isSticker = isSticker,
+      photoOverlayPath = photoOverlayPath
     )
     _uiState.update { it.copy(textTracks = it.textTracks + newTrack, showAddTextDialog = false, selectedTextId = newTrack.id, activeSubMenu = SubMenuType.NONE) }
     showToast("Added text overlay")
