@@ -70,7 +70,7 @@ import com.example.ui.theme.CapCutTextSecondary
 import kotlinx.coroutines.launch
 
 @Composable
-fun MeScreen() {
+fun MeScreen(modifier: Modifier = Modifier) {
   val context = LocalContext.current
   val db = remember { AppDatabase.getDatabase(context) }
   val projects by db.projectDao().getAllProjects().collectAsState(initial = emptyList())
@@ -97,10 +97,9 @@ fun MeScreen() {
   }
 
   Column(
-    modifier = Modifier
+    modifier = modifier
       .fillMaxSize()
       .background(CapCutBackground)
-      .windowInsetsPadding(WindowInsets.statusBars)
       .verticalScroll(rememberScrollState())
       .padding(horizontal = 16.dp, vertical = 12.dp)
   ) {

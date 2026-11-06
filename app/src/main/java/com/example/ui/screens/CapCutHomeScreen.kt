@@ -36,7 +36,7 @@ fun CapCutHomeScreen(onNewVideoClick: () -> Unit, onEditPhotoClick: () -> Unit, 
     containerColor = CapCutBackground,
     bottomBar = {
       NavigationBar(containerColor = CapCutSurface) {
-        listOf("Create" to Icons.Default.AddCircle, "Projects" to Icons.Default.Folder).forEachIndexed { index, item ->
+        listOf("Create" to Icons.Default.AddCircle, "Projects" to Icons.Default.Folder, "Settings" to Icons.Default.Settings).forEachIndexed { index, item ->
           NavigationBarItem(
             selected = tab == index, onClick = { tab = index },
             icon = { Icon(item.second, null) }, label = { Text(item.first) }
@@ -47,6 +47,8 @@ fun CapCutHomeScreen(onNewVideoClick: () -> Unit, onEditPhotoClick: () -> Unit, 
   ) { padding ->
     if (tab == 1) {
       ProjectLibrary(onOpenProject, onNewVideoClick, Modifier.padding(padding))
+    } else if (tab == 2) {
+      MeScreen(Modifier.padding(padding))
     } else {
       LazyColumn(
         Modifier.fillMaxSize().padding(padding),

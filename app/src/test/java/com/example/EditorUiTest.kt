@@ -207,6 +207,20 @@ class EditorUiTest {
     compose.onNodeWithTag("timeline_play_pause_button").assertIsDisplayed()
   }
 
+  @Test fun homeSettingsOpensVersionDetails() {
+    compose.setContent {
+      CapCutTheme {
+        Box(Modifier.requiredSize(360.dp, 800.dp)) {
+          CapCutHomeScreen({}, {}, {})
+        }
+      }
+    }
+    compose.onNodeWithText("Settings").performClick()
+    compose.onNodeWithText("Version").performScrollTo().performClick()
+    compose.onNodeWithText("Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})").assertIsDisplayed()
+    compose.onNodeWithText("Done").performClick()
+  }
+
   @Test fun homeStartsMediaImport() {
     var opened = false
     compose.setContent {
