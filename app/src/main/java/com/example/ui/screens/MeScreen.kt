@@ -1,7 +1,13 @@
 package com.example.ui.screens
 
-import com.example.R
-import androidx.compose.ui.res.stringResource
+import com.example.BuildConfig
+import com.example.data.EditorPreferences
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
+import android.text.format.Formatter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -70,8 +76,25 @@ fun MeScreen() {
   val projects by db.projectDao().getAllProjects().collectAsState(initial = emptyList())
   val scope = rememberCoroutineScope()
 
-  var hapticFeedbackEnabled by remember { mutableStateOf(true) }
-  var smartHdrEnabled by remember { mutableStateOf(true) }
+  val preferences = remember(context) { EditorPreferences(context) }
+  var hapticFeedbackEnabled by remember { mutableStateOf(preferences.haptics) }
+  var highBitrate by remember { mutableStateOf(preferences.highBitrate) }
+  var cacheSize by remember { mutableStateOf<Long?>(null) }
+  var clearingCache by remember { mutableStateOf(false) }
+  var info by remember { mutableStateOf<Pair<String, String>?>(null) }
+
+  LaunchedEffect(context) {
+    cacheSize = withContext(Dispatchers.IO) { cacheBytes(context.cacheDir) }
+  }
+
+  info?.let { (title, message) ->
+    AlertDialog(
+      onDismissRequest = { info = null },
+      title = { Text(title) },
+      text = { Text(message) },
+      confirmButton = { TextButton(onClick = { info = null }) { Text("Done") } }
+    )
+  }
 
   Column(
     modifier = Modifier
@@ -127,7 +150,7 @@ fun MeScreen() {
     ) {
       StatCard(label = "Projects", value = "${projects.size}", modifier = Modifier.weight(1f))
       StatCard(label = "Clips Edited", value = "${projects.sumOf { it.clipCount }}", modifier = Modifier.weight(1f))
-      StatCard(label = "Storage", value = "28 MB", modifier = Modifier.weight(1f))
+      StatCard(label = "Cache", value = cacheSize?.let { Formatter.formatShortFileSize(context, it) } ?: "…", modifier = Modifier.weight(1f))
     }
 
     Spacer(modifier = Modifier.height(24.dp))
@@ -145,17 +168,17 @@ fun MeScreen() {
       SettingsToggleItem(
         icon = Icons.Default.Vibration,
         title = "Haptic Vibration",
-        subtitle = "Vibrate on split, cut and snap",
+        subtitle = "Vibrate after a successful split or cut",
         checked = hapticFeedbackEnabled,
-        onCheckedChange = { hapticFeedbackEnabled = it }
+        onCheckedChange = { hapticFeedbackEnabled = it; preferences.haptics = it }
       )
 
       SettingsToggleItem(
         icon = Icons.Default.HighQuality,
         title = "High-Bitrate Export",
-        subtitle = "Hardware-accelerated offline encoder",
-        checked = smartHdrEnabled,
-        onCheckedChange = { smartHdrEnabled = it }
+        subtitle = "Request a higher bitrate for H.264 exports",
+        checked = highBitrate,
+        onCheckedChange = { highBitrate = it; preferences.highBitrate = it }
       )
 
       SettingsActionItem(
@@ -163,10 +186,22 @@ fun MeScreen() {
         title = "Clear Cache",
         subtitle = "Free temporary preview buffer",
         onClick = {
-          try {
-            context.cacheDir.deleteRecursively()
-          } catch (_: Exception) {}
-          Toast.makeText(context, "Temporary cache cleared", Toast.LENGTH_SHORT).show()
+          if (!clearingCache) {
+            clearingCache = true
+            scope.launch {
+              try {
+                val (cleared, bytes) = withContext(Dispatchers.IO) {
+                  val files = context.cacheDir.listFiles().orEmpty()
+                  val success = files.map { it.deleteRecursively() }.all { it }
+                  success to cacheBytes(context.cacheDir)
+                }
+                cacheSize = bytes
+                Toast.makeText(context, if (cleared) "Temporary cache cleared" else "Some cache files could not be cleared", Toast.LENGTH_SHORT).show()
+              } finally {
+                clearingCache = false
+              }
+            }
+          }
         }
       )
     }
@@ -188,21 +223,24 @@ fun MeScreen() {
         title = "Privacy & Offline Architecture",
         subtitle = "No cloud uploads, data remains on device",
         onClick = {
-          Toast.makeText(context, "All processing occurs locally on-device", Toast.LENGTH_SHORT).show()
+          info = "Privacy and offline editing" to "Edits processes projects on your device. Your media stays in its source location or app storage. When you export, you choose where to save a copy."
         }
       )
 
       SettingsActionItem(
         icon = Icons.Default.Info,
         title = "Version",
-        subtitle = stringResource(R.string.app_name),
-        onClick = {}
+        subtitle = BuildConfig.VERSION_NAME,
+        onClick = { info = "Edits" to "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})" }
       )
     }
 
     Spacer(modifier = Modifier.height(32.dp))
   }
 }
+
+private fun cacheBytes(directory: java.io.File): Long =
+  directory.walkTopDown().filter { it.isFile }.sumOf { it.length() }
 
 @Composable
 private fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {

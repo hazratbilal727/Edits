@@ -41,6 +41,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import android.view.HapticFeedbackConstants
+import com.example.data.EditorPreferences
 import androidx.compose.ui.platform.testTag
 import com.example.model.AspectRatioOption
 import com.example.model.MainTool
@@ -78,6 +81,12 @@ fun CapCutEditorScreen(
   ) { uiState }
   val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
   val context = LocalContext.current
+  val view = LocalView.current
+  val preferences = remember(context) { EditorPreferences(context) }
+  val editFeedback = {
+    if (preferences.haptics) view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+    Unit
+  }
   var showCaptionTools by remember { mutableStateOf(false) }
   var subtitleId by remember { mutableStateOf<String?>(null) }
   val importSrt = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -92,6 +101,9 @@ fun CapCutEditorScreen(
   var showStickers by remember { mutableStateOf(false) }
   val importOverlay = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
     if (uri != null) viewModel.importPhotoOverlay(uri)
+  }
+  val extractAudio = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    if (uri != null) viewModel.importLocalAudio(uri)
   }
   val importAudio = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
     if (uri != null) viewModel.importLocalAudio(uri)
@@ -155,7 +167,7 @@ fun CapCutEditorScreen(
           }
         },
         onCloseSubMenu = { viewModel.closeSubMenu() },
-        onSplitClip = { viewModel.splitCurrentClip() },
+        onSplitClip = { if (viewModel.splitCurrentClip()) editFeedback() },
         onTrimClip = { clipDialog = "Trim" },
         onCutClip = { clipDialog = "Cut" },
         onCropClip = { clipDialog = "Crop" },
@@ -163,7 +175,6 @@ fun CapCutEditorScreen(
         onDeleteClip = { viewModel.deleteSelectedClip() },
         onDuplicateClip = { viewModel.duplicateSelectedClip() },
         onRotateClip = { viewModel.rotateSelectedClip() },
-        onReverseClip = { clipDialog = "Reverse" },
         onFreezeClip = { viewModel.freezeFrame() },
         onOpenSpeedMenu = { viewModel.openSpeedMenu() },
         onOpenSpeedCurve = {
@@ -193,6 +204,10 @@ fun CapCutEditorScreen(
         onImportAudio = {
           viewModel.pausePlayback()
           importAudio.launch(arrayOf("audio/*"))
+        },
+        onExtractAudio = {
+          viewModel.pausePlayback()
+          extractAudio.launch(arrayOf("video/*"))
         },
         onMoveClip = viewModel::moveSelectedClip,
         onOpenClipFades = {
@@ -338,7 +353,7 @@ fun CapCutEditorScreen(
               showCaptionTools = false
               importSrt.launch(arrayOf("*/*"))
             }) { Text("Import SRT") }
-            TextButton(enabled = uiState.textTracks.isNotEmpty(), onClick = {
+            TextButton(enabled = uiState.textTracks.any { !it.isSticker && it.photoOverlayPath == null && it.text.isNotBlank() }, onClick = {
               showCaptionTools = false
               saveSrt.launch("captions.srt")
             }) { Text("Save SRT") }
@@ -406,12 +421,6 @@ fun CapCutEditorScreen(
             }
           }
         },
-        confirmButton = { TextButton(onClick = { clipDialog = null }) { Text("Done") } }
-      )
-    } else if (tool == "Reverse") {
-      AlertDialog(
-        onDismissRequest = { clipDialog = null }, title = { Text("Reverse") },
-        text = { Text("Reverse rendering is not available in this version.") },
         confirmButton = { TextButton(onClick = { clipDialog = null }) { Text("Done") } }
       )
     } else if (clip != null && (tool == "Speed Curve" || tool == "Keyframes")) {
@@ -499,7 +508,7 @@ fun CapCutEditorScreen(
           TextButton(enabled = tool == "Crop" || valid, onClick = {
             when (tool) {
               "Crop" -> viewModel.setSelectedCrop(crop)
-              "Cut" -> viewModel.cutSelectedRange(requireNotNull(from), requireNotNull(to))
+              "Cut" -> if (viewModel.cutSelectedRange(requireNotNull(from), requireNotNull(to))) editFeedback()
               else -> viewModel.setSelectedTrim(requireNotNull(from), requireNotNull(to))
             }
             clipDialog = null

@@ -54,6 +54,8 @@ private fun LocalTrackPlayer(source: String, position: Long, playing: Boolean, v
     }
   }
   LaunchedEffect(player) {
+    player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+      .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true).build()
     player.setMediaItem(MediaItem.fromUri(source), position.coerceAtLeast(0))
     player.prepare()
   }

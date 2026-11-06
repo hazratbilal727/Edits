@@ -282,7 +282,7 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
     pausePlayback()
     when (tool) {
       MainTool.EDIT -> {
-        val selected = _uiState.value.selectedClipId ?: _uiState.value.clips.firstOrNull()?.id
+        val selected = _uiState.value.selectedClipId ?: _uiState.value.currentClipAtPlayhead?.id
         _uiState.update {
           it.copy(
             selectedClipId = selected,
@@ -318,7 +318,7 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
     _uiState.update { it.copy(activeSubMenu = SubMenuType.NONE) }
   }
 
-  fun splitCurrentClip() {
+  fun splitCurrentClip(): Boolean {
     val state = _uiState.value
     val currentTime = state.currentTimeMs
     val clips = state.clips.toMutableList()
@@ -339,7 +339,7 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
       val firstEnd = target.speedSegments().sourceTimeAt(currentTime - accumulated)
       if (firstEnd - target.startMs < 100 || target.endMs - firstEnd < 100) {
         showToast("Leave at least 100 ms on each side of the split")
-        return
+        return false
       }
       saveSnapshot()
       pausePlayback()
@@ -358,11 +358,12 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
           selectedClipId = secondPart.id
         )
       }
-      toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, 50)
       showToast("Clip split at current position")
+      return true
     } else {
       showToast("Move playhead inside a clip to split")
     }
+    return false
   }
 
   fun deleteSelectedClip() {
@@ -515,9 +516,9 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
     updateSelectedClip(selected.copy(startMs = startMs, endMs = endMs))
   }
 
-  fun cutSelectedRange(startMs: Long, endMs: Long) {
-    val clip = _uiState.value.selectedClip ?: return
-    if (startMs - clip.startMs < 100 || clip.endMs - endMs < 100 || endMs - startMs < 100) return
+  fun cutSelectedRange(startMs: Long, endMs: Long): Boolean {
+    val clip = _uiState.value.selectedClip ?: return false
+    if (startMs - clip.startMs < 100 || clip.endMs - endMs < 100 || endMs - startMs < 100) return false
     saveSnapshot()
     pausePlayback()
     _uiState.update { state ->
@@ -530,6 +531,7 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
       val duration = calculateTotalDuration(clips)
       state.copy(clips = clips, totalDurationMs = duration, currentTimeMs = state.currentTimeMs.coerceAtMost(duration))
     }
+    return true
   }
 
   private fun updateSelectedClip(clip: VideoClip) {
@@ -1044,7 +1046,7 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
     val state = _uiState.value
     val cues = state.textTracks.mapNotNull { track ->
       val end = minOf(track.endMs, state.totalDurationMs)
-      if (end <= track.startMs || track.text.isBlank()) null else SubtitleCue(track.startMs, end, track.text)
+      if (end <= track.startMs || track.text.isBlank() || track.isSticker || track.photoOverlayPath != null) null else SubtitleCue(track.startMs, end, track.text)
     }
     val resolver = getApplication<Application>().contentResolver
     viewModelScope.launch {
@@ -1182,6 +1184,20 @@ class VideoEditorViewModel(application: Application, private val savedStateHandl
       check(directory.isDirectory || directory.mkdirs()) { "Could not create export folder." }
       val output = File(directory, "Edit-${UUID.randomUUID()}.mp4")
       val transformer = Transformer.Builder(app)
+        .apply {
+          if (com.example.data.EditorPreferences(app).highBitrate) {
+            val bitrateAt30Fps = when (snapshot.resolutionSetting.label) {
+              "720P" -> 10_000_000
+              "4K" -> 48_000_000
+              else -> 20_000_000
+            }
+            val settings = androidx.media3.transformer.VideoEncoderSettings.Builder()
+              .setBitrate((bitrateAt30Fps.toLong() * snapshot.resolutionSetting.fps / 30).toInt())
+              .build()
+            setEncoderFactory(androidx.media3.transformer.DefaultEncoderFactory.Builder(app)
+              .setRequestedVideoEncoderSettings(settings).build())
+          }
+        }
         .setVideoMimeType(MimeTypes.VIDEO_H264)
         .addListener(object : Transformer.Listener {
           override fun onCompleted(composition: Composition, exportResult: ExportResult) {

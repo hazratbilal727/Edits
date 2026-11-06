@@ -31,7 +31,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.RotateRight
@@ -85,7 +85,6 @@ fun CapCutBottomBar(
   onDeleteClip: () -> Unit,
   onDuplicateClip: () -> Unit,
   onRotateClip: () -> Unit,
-  onReverseClip: () -> Unit,
   onFreezeClip: () -> Unit,
   onOpenSpeedMenu: () -> Unit,
   onOpenSpeedCurve: () -> Unit,
@@ -101,6 +100,7 @@ fun CapCutBottomBar(
   onUpdateAdjust: (AdjustSettings) -> Unit,
   onResetAdjust: () -> Unit,
   onImportAudio: () -> Unit,
+  onExtractAudio: () -> Unit,
   onMoveClip: (Int) -> Unit,
   onOpenClipFades: () -> Unit,
   onOpenCaptions: () -> Unit,
@@ -174,7 +174,6 @@ fun CapCutBottomBar(
           ToolIconItem("Volume", Icons.Default.VolumeUp, onOpenVolumeMenu)
           ToolIconItem("Rotate", Icons.Default.RotateRight, onRotateClip)
           ToolIconItem("Freeze", Icons.Default.AcUnit, onFreezeClip)
-          ToolIconItem("Reverse", Icons.Default.History, onReverseClip)
           ToolIconItem("Duplicate", Icons.Default.ContentCopy, onDuplicateClip)
           ToolIconItem("Delete", Icons.Default.Delete, onDeleteClip)
         }
@@ -352,6 +351,7 @@ fun CapCutBottomBar(
             Icon(Icons.Default.Check, contentDescription = "Done", tint = CapCutTeal)
           }
           ToolIconItem("Import Audio", Icons.Default.MusicNote, onImportAudio)
+          ToolIconItem("Extract Audio", Icons.Default.VideoLibrary, onExtractAudio)
           ToolIconItem("Sound FX", Icons.Default.Audiotrack, onOpenSfxDialog)
           ToolIconItem("Voiceover", Icons.Default.Mic, onOpenVoiceoverDialog)
         }
